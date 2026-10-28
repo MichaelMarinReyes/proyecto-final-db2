@@ -1,0 +1,22 @@
+# Documentos privados, notas de desarrollo y conversaciones (no se versionan)
+docs/
+
+# Backend (Spring Boot / Maven)
+target/
+**/target/
+
+# Frontend (React / Vite)
+node_modules/
+**/node_modules/
+dist/
+**/dist/
+
+# Variables de entorno y secretos
+.env
+.env.*
+*.log
+
+# IDE
+.idea/
+.vscode/
+*.iml

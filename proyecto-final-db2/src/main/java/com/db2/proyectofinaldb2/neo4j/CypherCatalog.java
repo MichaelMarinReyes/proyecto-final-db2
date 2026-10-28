@@ -136,6 +136,8 @@ public final class CypherCatalog {
             MATCH (a:Aspirante)-[:PROCEDE_DE]->(i:Institucion)-[:UBICADA_EN]->(mu:Municipio)-[:PERTENECE_A]->(d:Departamento)
             MATCH (a)-[:ASPIRA_A]->(c:Carrera)
             OPTIONAL MATCH (a)-[:REALIZO]->(e:Evaluacion)-[:DE_MATERIA]->(mat:Materia)
+            WHERE (e)-[:PARA_CARRERA]->(c)
+            WITH a, i, mu, d, c, e, mat
             WHERE 1 = 1
             """;
 
