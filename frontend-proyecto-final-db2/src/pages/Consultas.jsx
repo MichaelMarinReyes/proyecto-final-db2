@@ -6,6 +6,7 @@ import EstadoError from '../components/EstadoError';
 import FiltroBar, { SelectCampo } from '../components/FiltroBar';
 import useConsultas from '../hooks/useConsultas';
 import useCatalogos from '../hooks/useCatalogos';
+import ConsultasGuardadas from '../components/ConsultasGuardadas';
 import { formatearNumero } from '../utils/formato';
 
 const CONSULTAS = [
@@ -218,6 +219,8 @@ export default function Consultas() {
           {cargando ? 'Ejecutando…' : 'Ejecutar de nuevo'}
         </button>
       </header>
+
+      <ConsultasGuardadas motor="MONGODB" />
 
       <div className="consultas-layout">
         <aside className="lista-consultas">

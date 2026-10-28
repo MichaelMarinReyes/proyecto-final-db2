@@ -37,7 +37,7 @@ public class CargaService {
     public CargaService(EvaluationRepository repository,
                         EtlService etlService,
                         ExecutorService etlExecutor,
-                        @Value("${app.etl.temp-dir:}") String configuredTempDir) {
+                        @Value("${app.etl.temp-dir}") String configuredTempDir) {
         this.repository = repository;
         this.etlService = etlService;
         this.etlExecutor = etlExecutor;

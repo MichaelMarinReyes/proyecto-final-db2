@@ -35,6 +35,8 @@ El proyecto combina **MongoDB** para el análisis documental y **Neo4j** para el
 
 ## Inicio rápido
 
+Antes de ejecutar, prepara los archivos `.env` privados indicados en [configuración local](documentacion/configuracion-local.md). No se incluyen en GitHub ni hay contraseñas predeterminadas en el código.
+
 ### 1. Bases de datos
 
 ```bash
@@ -47,7 +49,7 @@ Servicios:
 - MongoDB: `mongodb://localhost:27017/evaluaciones`
 - Neo4j Browser: <http://localhost:7474>
 - Neo4j Bolt: `bolt://localhost:7687`
-- Usuario/contraseña Neo4j: `neo4j` / `evaluaciones2026`
+- Credenciales Neo4j: consultar el archivo `.env` local de infraestructura; no se publican en este documento.
 
 ### 2. Backend
 
@@ -94,19 +96,11 @@ curl http://localhost:8080/api/cargas/{id}
 
 ## Configuración
 
-El backend usa variables de entorno con valores locales por defecto:
+Las pantallas de consultas incluyen una [biblioteca de consultas personalizadas](documentacion/consultas-personalizadas.md) persistente, con lectura y escritura para administradores. Requiere la clave privada del `.env` del backend y confirmación explícita para modificar datos; las consultas predefinidas se conservan.
 
-| Variable | Valor por defecto | Descripción |
-|---|---|---|
-| `MONGO_URI` | `mongodb://localhost:27017/evaluaciones` | URI de MongoDB |
-| `NEO4J_URI` | `bolt://localhost:7687` | URI Bolt |
-| `NEO4J_USER` | `neo4j` | Usuario de Neo4j |
-| `NEO4J_PASSWORD` | `evaluaciones2026` | Contraseña de Neo4j |
-| `ETL_BATCH_SIZE` | `1000` | Filas por lote |
-| `ETL_TEMP_DIR` | vacío | Directorio base temporal para las cargas |
-| `CORS_ORIGINS` | `http://localhost:5173,http://127.0.0.1:5173,http://localhost:3000` | Orígenes permitidos |
+Los valores de conexiones, autenticación, puertos y opciones locales se guardan en `.env` ignorados por Git. `application.yml` conserva únicamente opciones estáticas del framework, sin interpolaciones ni credenciales. Consulta [configuracion-local.md](documentacion/configuracion-local.md) para los nombres de configuración y la ubicación de cada archivo.
 
-En el frontend, `VITE_API_URL` permite cambiar la URL base de la API. Si no se define, se usa `/api`.
+No pongas secretos en variables `VITE_*`: sus valores se incluyen en el JavaScript que descarga el navegador. Los nombres de configuración que lee el código no son secretos; sus valores privados no se versionan.
 
 ## Estructura del repositorio
 

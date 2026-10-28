@@ -17,6 +17,9 @@ Esta carpeta contiene los **entregables que se versionan en Git**. Las notas de 
 | [analisis-resultados.md](analisis-resultados.md) | Completo | Metodología, hallazgos de la muestra y limitaciones |
 | [conclusiones.md](conclusiones.md) | Completo | Comparación MongoDB/Neo4j, aprendizajes y trabajo futuro |
 | [pruebas.md](pruebas.md) | Completo | Evidencia de pruebas unitarias, API, ETL y navegador |
+| [auditoria-arquitectura.md](auditoria-arquitectura.md) | Completo | Auditoría estática de capas, comunicaciones, responsabilidades y refactorizaciones recomendadas |
+| [configuracion-local.md](configuracion-local.md) | Completo | Configuración privada con archivos `.env` no versionados |
+| [consultas-personalizadas.md](consultas-personalizadas.md) | Completo | Biblioteca persistente MongoDB/Cypher, permisos, escrituras y ejemplos |
 
 ## Requisitos cubiertos
 

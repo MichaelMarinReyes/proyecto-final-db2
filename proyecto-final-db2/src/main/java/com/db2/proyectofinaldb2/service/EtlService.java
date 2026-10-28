@@ -32,7 +32,7 @@ public class EtlService {
     public EtlService(EvaluationRepository repository,
                       TransformationService transformationService,
                       Driver driver,
-                      @Value("${app.etl.batch-size:1000}") int batchSize) {
+                      @Value("${app.etl.batch-size}") int batchSize) {
         this.repository = repository;
         this.transformationService = transformationService;
         this.driver = driver;

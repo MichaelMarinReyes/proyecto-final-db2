@@ -17,9 +17,9 @@ public class Neo4jConfig {
 
     @Bean(destroyMethod = "close")
     @ConditionalOnMissingBean(Driver.class)
-    public Driver neo4jDriver(@Value("${spring.neo4j.uri:bolt://localhost:7687}") String uri,
-                              @Value("${spring.neo4j.authentication.username:neo4j}") String username,
-                              @Value("${spring.neo4j.authentication.password:evaluaciones2026}") String password) {
+    public Driver neo4jDriver(@Value("${spring.neo4j.uri}") String uri,
+                              @Value("${spring.neo4j.authentication.username}") String username,
+                              @Value("${spring.neo4j.authentication.password}") String password) {
         return GraphDatabase.driver(uri, AuthTokens.basic(username, password));
     }
 }

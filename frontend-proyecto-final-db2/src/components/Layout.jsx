@@ -64,7 +64,6 @@ export default function Layout() {
           <div className="marca-logo">USAC</div>
           <div>
             <strong>Pruebas Específicas</strong>
-            <span>Bases de Datos 2</span>
           </div>
         </div>
 
@@ -99,11 +98,6 @@ export default function Layout() {
               ? `${new Intl.NumberFormat('es-GT').format(salud.colecciones.evaluaciones)} evaluaciones cargadas`
               : 'Sin datos disponibles'}
           </p>
-        </div>
-
-        <div className="sidebar-pie">
-          <span>Proyecto final</span>
-          <span>Segundo semestre 2026</span>
         </div>
       </aside>
 

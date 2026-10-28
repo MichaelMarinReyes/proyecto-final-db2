@@ -98,7 +98,7 @@ docker compose ps
 El `docker-compose.yml` define:
 
 - `db2-mongo`: MongoDB 7, puerto `27017`, volumen persistente.
-- `db2-neo4j`: Neo4j 5 Community, puertos `7474` y `7687`, autenticación `neo4j/evaluaciones2026`.
+- `db2-neo4j`: Neo4j 5 Community, puertos `7474` y `7687`, autenticación definida en su `.env` privado.
 
 Verificar:
 
@@ -183,48 +183,17 @@ El resultado queda en `frontend-proyecto-final-db2/dist`.
 
 ### 5.1 Backend
 
-Archivo: `proyecto-final-db2/src/main/resources/application.yml`.
+Archivo privado: `proyecto-final-db2/.env`. El backend lo carga antes de configurar los drivers. Los valores del sistema operativo y de la línea de comandos tienen prioridad. No hay contraseñas predeterminadas en Java ni conexiones interpoladas en YAML.
 
-| Variable | Defecto | Uso |
-|---|---|---|
-| `MONGO_URI` | `mongodb://localhost:27017/evaluaciones` | Conexión MongoDB. |
-| `NEO4J_URI` | `bolt://localhost:7687` | Conexión Bolt. |
-| `NEO4J_USER` | `neo4j` | Usuario Neo4j. |
-| `NEO4J_PASSWORD` | `evaluaciones2026` | Contraseña Neo4j. |
-| `ETL_BATCH_SIZE` | `1000` | Filas por lote. |
-| `ETL_TEMP_DIR` | vacío | Directorio base para temporales; se crea un subdirectorio único por carga. |
-| `CORS_ORIGINS` | `http://localhost:5173,http://127.0.0.1:5173,http://localhost:3000` | Orígenes permitidos, separados por coma. |
-
-Ejemplo:
-
-```bash
-export MONGO_URI="mongodb://localhost:27017/evaluaciones"
-export NEO4J_PASSWORD="evaluaciones2026"
-export ETL_BATCH_SIZE="500"
-./mvnw spring-boot:run
-```
+La lista de nombres requeridos y las instrucciones de instalación están en [configuracion-local.md](configuracion-local.md). Debes preparar los `.env` antes del primer arranque, ya que no se incluyen al clonar el repositorio.
 
 ### 5.2 Frontend
 
-| Variable | Defecto | Uso |
-|---|---|---|
-| `VITE_API_URL` | `/api` | URL base de la API. Si se omite, usa el proxy de Vite o un proxy inverso. |
-
-Ejemplo para un backend en otro host:
-
-```bash
-VITE_API_URL=http://192.168.1.10:8080/api npm run dev
-```
+Archivo privado: `frontend-proyecto-final-db2/.env`. Vite lee la URL pública de la API, el destino privado del proxy de desarrollo y el puerto del frontend. Reinicia Vite después de modificarlo. Las variables `VITE_*` son públicas y nunca deben incluir credenciales.
 
 ### 5.3 Límites de carga
 
-```yaml
-spring:
-  servlet:
-    multipart:
-      max-file-size: 100MB
-      max-request-size: 500MB
-```
+Se configuran exclusivamente en el `.env` del backend mediante `SPRING_SERVLET_MULTIPART_MAX_FILE_SIZE` y `SPRING_SERVLET_MULTIPART_MAX_REQUEST_SIZE`.
 
 Si el dataset real supera estos límites, ajuste los valores y reinicie el backend.
 
@@ -309,6 +278,8 @@ curl "http://localhost:8080/api/grafo/nodo/4%3Aabc%3A123"
 
 ### 6.6 Errores
 
+La biblioteca administrativa agrega `/api/consultas/guardadas` para listar/guardar definiciones y `POST /api/consultas/guardadas/{id}/ejecutar`. Todas sus rutas requieren la clave privada; la escritura requiere confirmación. Ver [consultas-personalizadas.md](consultas-personalizadas.md) para contratos, ejemplos y límites. Las consultas predefinidas conservan sus rutas originales.
+
 Formato uniforme:
 
 ```json
@@ -374,7 +345,7 @@ Cubre:
 - `TransformationServiceTest`: alias de encabezados, normalización de sexo/tipo, edad, hash, claves de grafo y rechazos.
 - `CsvSupportTest`: detección de coma, punto y coma, tabulador y comillas.
 
-Resultado esperado: 10 pruebas, sin fallas ni errores, incluyendo la regresión del explorador en `GraphServiceTest`.
+Resultado esperado: 21 pruebas, sin fallas ni errores, incluyendo la regresión del explorador, configuración privada y políticas de consultas personalizadas.
 
 ### 9.2 Frontend
 
@@ -413,7 +384,7 @@ java -jar target/proyecto-final-db2-0.0.1-SNAPSHOT.jar
 
 - Verificar `docker compose ps`.
 - Revisar `docker logs db2-mongo`.
-- Confirmar `MONGO_URI`.
+- Confirmar `SPRING_MONGODB_URI` en el `.env` del backend.
 - Si el puerto 27017 está ocupado, cambiar el mapeo en `docker-compose.yml` y la URI.
 
 ### El backend no conecta a Neo4j
@@ -437,7 +408,7 @@ O cambiar `server.port`.
 - Confirmar que el backend responde en `http://localhost:8080/api/salud`.
 - Revisar la consola del navegador.
 - Si se usa `VITE_API_URL`, confirmar que no termine en `/` duplicado.
-- Si se accede desde otro host, agregar el origen a `CORS_ORIGINS`.
+- Si se accede desde otro host, agregar el origen a `APP_CORS_ALLOWED_ORIGINS` en el `.env` del backend.
 
 ### Los acentos se ven mal en el CSV
 
@@ -481,7 +452,7 @@ MATCH (n) RETURN labels(n)[0] AS tipo, count(*) AS total ORDER BY total DESC;
 5. Cambiar credenciales y usar secretos.
 6. No exponer los puertos 27017/7687 a Internet.
 7. Configurar respaldos de MongoDB y Neo4j.
-8. Definir `CORS_ORIGINS` con el dominio real.
+8. Definir `APP_CORS_ALLOWED_ORIGINS` con el dominio real en la configuración privada.
 
 ## 12. Limitaciones conocidas
 

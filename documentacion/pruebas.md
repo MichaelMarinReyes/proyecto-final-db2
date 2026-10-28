@@ -19,7 +19,8 @@ Desde `proyecto-final-db2/`:
 | `TransformationServiceTest` | 5 | 0 | 0 |
 | `CsvSupportTest` | 4 | 0 | 0 |
 | `GraphServiceTest` | 1 | 0 | 0 |
-| **Total** | **10** | **0** | **0** |
+| `DotenvEnvironmentPostProcessorTest` | 3 | 0 | 0 |
+| **Total** | **13** | **0** | **0** |
 
 La ejecución final de `./mvnw -q test package` terminó con código 0. El JAR ejecutable se genera en `proyecto-final-db2/target/`. Los reportes completos están en `target/surefire-reports/` y no se versionan.
 
@@ -148,3 +149,28 @@ Las cargas de prueba no añadieron evaluaciones ni aspirantes: se conservaron **
 ### Dictamen y limitaciones vigentes
 
 El flujo local frontend → API → MongoDB/Neo4j funciona con la muestra disponible, tanto en desarrollo como en el build del frontend. Continúan pendientes la validación con el dataset oficial, las pruebas de volumen y la recuperación de jobs interrumpidos por reinicio del backend. El bundle de aproximadamente 854 kB sigue generando una advertencia de tamaño, sin impedir su ejecución.
+
+## Verificación de `.env` — 27 de octubre de 2026
+
+- `./mvnw -q test package`: 13 pruebas aprobadas; el JAR no incluye ningún `.env`.
+- `npm run build`: correcto, sin incluir la contraseña de la base de datos en los artefactos del frontend.
+- Los cuatro `.env` existen localmente, tienen permisos restrictivos y están ignorados y no versionados por Git.
+- `docker compose config --quiet`: válido, sin imprimir credenciales.
+- JAR ejecutado tanto desde el directorio del backend como desde la raíz: carga privada de configuración comprobada.
+- Tras conservar la base que contenía los datos existentes: salud `OK`, 27 evaluaciones y 12 aspirantes; C1–C20 y G1–G7 responden 200 con datos.
+- CORS y proxy de desarrollo Vite leen correctamente sus valores locales.
+- YAML sin interpolaciones de variables ni contraseñas; no se encontró la contraseña local en los archivos versionados actuales.
+
+Las tres nuevas pruebas unitarias cubren lectura de nombres en mayúsculas, valores entre comillas y vacíos, prioridad de configuración superior y ausencia de archivo local. No se repitió la suite histórica de navegador: sus scripts temporales ya no estaban disponibles en esta sesión. Las comprobaciones históricas de navegador descritas arriba corresponden a la revisión anterior.
+
+## Biblioteca de consultas personalizadas — 28 de octubre de 2026
+
+La ampliación suma ocho pruebas unitarias (`CustomQueryPolicyTest`: 6; `SavedQueryServiceTest`: 2). El total actual es **21 pruebas aprobadas**, sin fallas ni errores. Cubren operaciones MongoDB permitidas, rechazo de estructuras inválidas y cruces a otras bases, detección de escrituras Cypher, comentarios y cadenas, restricción de administración/procedimientos, clave administrativa y confirmación obligatoria.
+
+`./mvnw -q test package` y `npm run build` terminaron correctamente. Se verificó que la clave administrativa no se encuentre en el código ni en los artefactos del frontend.
+
+La nueva integración probó guardar y listar definiciones persistidas en MongoDB, lecturas y escrituras reales, confirmación de escrituras y respuestas 400/401/409. En Neo4j se verificó creación y borrado de un nodo temporal y lectura de un valor. En MongoDB se verificaron find, aggregate, insertMany, updateMany y deleteMany sobre un documento temporal identificado.
+
+En Chrome se comprobó guardar una definición MongoDB, recargar, desbloquear y recuperarla del servidor; guardar y ejecutar Cypher mostrando la tabla; no persistir la clave al recargar; bloquear el botón de escritura hasta escribir EJECUTAR; y ausencia de desbordamiento a 1440 y 390 px. No se registraron errores de consola ni de React.
+
+Se eliminaron solo los IDs y registros temporales creados por estas pruebas. No se cargó la muestra CSV ni se eliminaron datos del usuario. Los scripts auxiliares actuales están en `/tmp/opencode/test-saved-queries.py` y `/tmp/opencode/query-browser/test.cjs`; no se versionan. La guía de uso y riesgos está en [consultas-personalizadas.md](consultas-personalizadas.md).

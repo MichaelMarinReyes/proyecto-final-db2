@@ -127,6 +127,8 @@ La consulta 6 tiene un botón **Regenerar resumen**. Ejecuta un `$merge` sobre `
 
 ## 7. Explorador de grafos
 
+Las pantallas de consultas y grafos también incluyen **Agregar y guardar nuevas consultas**. Abre la biblioteca con la clave administrativa privada del backend y guarda nombre, descripción y código. La definición permanece en el servidor y no reemplaza las consultas predefinidas. Para modificar datos se exige escribir **EJECUTAR** antes de cada intento. Consulta [consultas-personalizadas.md](consultas-personalizadas.md) para ejemplos y limitaciones de sincronización entre bases.
+
 1. Ir a **Explorador de grafos**.
 2. Elegir filtros:
    - Carrera;
@@ -235,7 +237,7 @@ No de forma permanente. Se copian a un directorio temporal y se eliminan al term
 
 ### ¿Puedo usar la aplicación desde otro equipo?
 
-Sí, si el backend y el frontend son accesibles en la red y el origen del navegador está incluido en `CORS_ORIGINS`. Para un despliegue real se recomienda HTTPS y autenticación.
+Sí, si el backend y el frontend son accesibles en la red y el origen del navegador está incluido en `APP_CORS_ALLOWED_ORIGINS`, dentro del `.env` privado del backend. Para un despliegue real se recomienda HTTPS y autenticación.
 
 ## 11. Buenas prácticas
 

@@ -6,6 +6,7 @@ import Cargando from '../components/Cargando';
 import EstadoError from '../components/EstadoError';
 import FiltroBar, { SelectCampo } from '../components/FiltroBar';
 import useCatalogos from '../hooks/useCatalogos';
+import ConsultasGuardadas from '../components/ConsultasGuardadas';
 import { colorPorTipo, etiquetaNodo, formatearNumero, formatearValor } from '../utils/formato';
 
 const CONSULTAS_GRAFO = [
@@ -165,12 +166,13 @@ export default function ExploradorGrafos() {
           <p>Filtra el grafo, recorre las conexiones y ejecuta consultas Cypher sobre aspirantes, carreras, materias e instituciones.</p>
         </div>
         <div className="acciones-encabezado">
-          <a className="boton boton-secundario" href="http://localhost:7474" target="_blank" rel="noreferrer">Abrir Neo4j Browser</a>
           <button type="button" className="boton boton-primario" onClick={() => cargarGrafo(aplicados)} disabled={cargandoGrafo}>
             {cargandoGrafo ? 'Consultando…' : 'Actualizar grafo'}
           </button>
         </div>
       </header>
+
+      <ConsultasGuardadas motor="NEO4J" />
 
       <FiltroBar onLimpiar={limpiarFiltros} onAplicar={aplicarFiltros} aplicando={cargandoGrafo} textoAplicar="Explorar grafo">
         <SelectCampo etiqueta="Carrera" valor={filtros.carrera} onChange={(valor) => cambiarFiltro('carrera', valor)} opciones={catalogos.carreras} disabled={cargandoCatalogos} />

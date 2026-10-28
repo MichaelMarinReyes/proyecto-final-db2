@@ -142,7 +142,7 @@ MERGE (mu)-[:PERTENECE_A]->(d)
 MERGE (a)-[:PROCEDE_DE]->(i)
 ```
 
-La carga se ejecuta en lotes (`ETL_BATCH_SIZE`, 1000 por defecto) dentro de una sesión de escritura. Si un lote falla, la carga se marca con error y se conserva el detalle para reintentar.
+La carga se ejecuta en lotes (`APP_ETL_BATCH_SIZE` en el `.env` privado) dentro de una sesión de escritura. Si un lote falla, la carga se marca con error y se conserva el detalle para reintentar.
 
 ## 6. Patrones de consulta
 

@@ -116,7 +116,7 @@ Las colecciones permanecieron en 27 evaluaciones y 12 aspirantes. El rechazo se 
 
 ## 7. Procesamiento por lotes
 
-- `ETL_BATCH_SIZE` define cuántas filas se acumulan antes de insertar en Mongo y enviar a Neo4j (1000 por defecto).
+- `APP_ETL_BATCH_SIZE`, configurado en el `.env` privado del backend, define cuántas filas se acumulan antes de insertar en Mongo y enviar a Neo4j.
 - Si un lote de Mongo falla por causas distintas a duplicados, el job termina con error y el reporte conserva el mensaje.
 - Si falla Neo4j, el lote de Mongo ya pudo haberse insertado. La carga se marca con error y puede reintentarse; la idempotencia evita duplicar lo ya insertado.
 - No hay transacción distribuida entre MongoDB y Neo4j; la consistencia se obtiene por reintento idempotente y por la reconstrucción de agregados desde `evaluaciones`.
@@ -135,7 +135,7 @@ Los rechazos se guardan en `registros_rechazados` con `carga_id`, archivo, fila,
 
 ## 9. Limpieza de temporales
 
-Cada carga crea un subdirectorio único dentro del directorio temporal del sistema (o dentro de `ETL_TEMP_DIR` si está configurado). Al finalizar, se elimina **solo ese subdirectorio**, no todo el directorio base. Esto evita borrar archivos de otras cargas o del usuario.
+Cada carga crea un subdirectorio único dentro del directorio temporal del sistema (o dentro de `APP_ETL_TEMP_DIR` si está configurado en el `.env` privado). Al finalizar, se elimina **solo ese subdirectorio**, no todo el directorio base. Esto evita borrar archivos de otras cargas o del usuario.
 
 ## 10. Ejecución manual
 

@@ -20,6 +20,7 @@ Base de datos: `evaluaciones`.
 | `resumen_carrera` | Una carrera | Resumen precalculado con `$merge` (consulta 6). |
 | `cargas` | Una carga | Historial, progreso, tiempos, totales y errores por archivo. |
 | `registros_rechazados` | Una fila rechazada | Trazabilidad de filas inválidas con causa, archivo y línea. |
+| `consultas_personalizadas` | Una definición guardada | Biblioteca administrativa MongoDB/Cypher; guarda nombre, código, motor y modo, no resultados. |
 
 ## 3. Colección `evaluaciones`
 

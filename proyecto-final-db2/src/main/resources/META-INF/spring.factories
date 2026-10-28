@@ -1,0 +1,2 @@
+org.springframework.boot.env.EnvironmentPostProcessor=\
+com.db2.proyectofinaldb2.config.DotenvEnvironmentPostProcessor

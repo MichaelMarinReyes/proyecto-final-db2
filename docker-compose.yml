@@ -5,8 +5,8 @@ services:
     restart: unless-stopped
     ports:
       - "27017:27017"
-    environment:
-      MONGO_INITDB_DATABASE: evaluaciones
+    env_file:
+      - ./infra/mongo/.env
     volumes:
       - mongo_data:/data/db
     healthcheck:
@@ -22,11 +22,8 @@ services:
     ports:
       - "7474:7474"
       - "7687:7687"
-    environment:
-      NEO4J_AUTH: neo4j/evaluaciones2026
-      NEO4J_server_memory_heap_initial__size: 512m
-      NEO4J_server_memory_heap_max__size: 1G
-      NEO4J_server_memory_pagecache_size: 512m
+    env_file:
+      - ./infra/neo4j/.env
     volumes:
       - neo4j_data:/data
       - neo4j_logs:/logs
