@@ -35,7 +35,7 @@ El proyecto combina **MongoDB** para el análisis documental y **Neo4j** para el
 
 ## Inicio rápido
 
-Antes de ejecutar, prepara los archivos `.env` privados indicados en [configuración local](documentacion/configuracion-local.md). No se incluyen en GitHub ni hay contraseñas predeterminadas en el código.
+Antes de ejecutar, prepara los archivos `.env` privados indicados en [configuración local](docs/configuracion-local.md). No se incluyen en GitHub ni hay contraseñas predeterminadas en el código.
 
 ### 1. Bases de datos
 
@@ -96,9 +96,9 @@ curl http://localhost:8080/api/cargas/{id}
 
 ## Configuración
 
-Las pantallas de consultas incluyen una [biblioteca de consultas personalizadas](documentacion/consultas-personalizadas.md) persistente, con lectura y escritura para administradores. Requiere la clave privada del `.env` del backend y confirmación explícita para modificar datos; las consultas predefinidas se conservan.
+Las pantallas de consultas incluyen una [biblioteca de consultas personalizadas](docs/consultas-personalizadas.md) persistente, con lectura y escritura para administradores. Requiere la clave privada del `.env` del backend y confirmación explícita para modificar datos; las consultas predefinidas se conservan.
 
-Los valores de conexiones, autenticación, puertos y opciones locales se guardan en `.env` ignorados por Git. `application.yml` conserva únicamente opciones estáticas del framework, sin interpolaciones ni credenciales. Consulta [configuracion-local.md](documentacion/configuracion-local.md) para los nombres de configuración y la ubicación de cada archivo.
+Los valores de conexiones, autenticación, puertos y opciones locales se guardan en `.env` ignorados por Git. `application.yml` conserva únicamente opciones estáticas del framework, sin interpolaciones ni credenciales. Consulta [configuracion-local.md](docs/configuracion-local.md) para los nombres de configuración y la ubicación de cada archivo.
 
 No pongas secretos en variables `VITE_*`: sus valores se incluyen en el JavaScript que descarga el navegador. Los nombres de configuración que lee el código no son secretos; sus valores privados no se versionan.
 
@@ -119,8 +119,8 @@ ProyectoFinal/
 │       └── test/java/com/db2/proyectofinaldb2/
 ├── frontend-proyecto-final-db2/ # Frontend React + Vite
 │   └── src/
-├── documentacion/              # Entregables versionados
-└── docs/                       # Notas internas, ignoradas por Git
+├── documentacion/              # Diagrama de clases PlantUML (.wsd)
+└── docs/                       # Documentos Markdown y notas, ignorados por Git
 ```
 
 ## Endpoints principales
@@ -142,7 +142,7 @@ ProyectoFinal/
 | GET | `/api/aspirantes/{correlativo}` | Ficha embebida del aspirante |
 | GET | `/api/aspirantes/{correlativo}/historial` | Historial de evaluaciones |
 
-La referencia completa está en [`documentacion/manual-tecnico.md`](documentacion/manual-tecnico.md).
+La referencia completa está en [`docs/manual-tecnico.md`](docs/manual-tecnico.md). Los documentos Markdown de `docs/` son locales y no se incluyen en Git.
 
 ## Pruebas
 
@@ -162,23 +162,26 @@ npm run build
 
 ## Datos
 
+Los CSV se revisan desde la interfaz y se validan y normalizan en el ETL Java del backend. No se requieren scripts Python.
+
 El portal oficial de Datos Abiertos de la Facultad de Ingeniería no estuvo disponible durante el desarrollo (respondió HTTP 500). Por ello, el repositorio incluye una **muestra sintética pequeña** para validar el ETL, las consultas y la interfaz. No debe interpretarse como el dataset real ni como resultados oficiales.
 
 Para cargar el dataset real, descargue los CSV desde el portal y súbalos desde la interfaz. El ETL reconoce los encabezados documentados y varias variantes habituales. Consulte [`etl/validar_dataset.md`](etl/validar_dataset.md).
 
 ## Documentación
 
-- [Manual técnico](documentacion/manual-tecnico.md)
-- [Manual de usuario](documentacion/manual-usuario.md)
-- [Arquitectura](documentacion/arquitectura.md)
-- [Modelamiento MongoDB](documentacion/modelamiento-mongodb.md)
-- [Modelamiento Neo4j](documentacion/modelamiento-neo4j.md)
-- [Reglas ETL](documentacion/etl-reglas.md)
-- [Consultas MongoDB](documentacion/consultas-mongodb.md)
-- [Consultas Neo4j](documentacion/consultas-neo4j.md)
-- [Análisis de resultados](documentacion/analisis-resultados.md)
-- [Conclusiones](documentacion/conclusiones.md)
-- [Pruebas y validación](documentacion/pruebas.md)
+- [Diagrama de clases backend y frontend](documentacion/diagrama_de_clases.wsd)
+- [Manual técnico](docs/manual-tecnico.md)
+- [Manual de usuario](docs/manual-usuario.md)
+- [Arquitectura](docs/arquitectura.md)
+- [Modelamiento MongoDB](docs/modelamiento-mongodb.md)
+- [Modelamiento Neo4j](docs/modelamiento-neo4j.md)
+- [Reglas ETL](docs/etl-reglas.md)
+- [Consultas MongoDB](docs/consultas-mongodb.md)
+- [Consultas Neo4j](docs/consultas-neo4j.md)
+- [Análisis de resultados](docs/analisis-resultados.md)
+- [Conclusiones](docs/conclusiones.md)
+- [Pruebas y validación](docs/pruebas.md)
 - [Validación del dataset oficial](etl/validar_dataset.md)
 
 ## Estado

@@ -1,0 +1,413 @@
+@startuml
+title Diagrama de clases del proyecto: backend y frontend
+
+package "Backend - Spring Boot" {
+  class ProyectoFinalDb2Application {
+    +{static} main(args: String[]): void
+  }
+
+  package "controller" {
+    class CargaController {
+      +upload(files: MultipartFile[]): ResponseEntity
+      +history(): List
+      +detail(id: String): Object
+    }
+    class ConsultaMongoController
+    class GrafoController
+    class BusquedaController
+    class CatalogoController
+    class SavedQueryController
+    class HealthController {
+      +health(): Map
+    }
+  }
+
+  package "service" {
+    class CargaService {
+      -repository: EvaluationRepository
+      -etlService: EtlService
+      -etlExecutor: ExecutorService
+      -jobs: Map
+      +start(files: MultipartFile[]): CargaReporteDto
+      +getJob(id: String): Object
+      +getJobs(): List
+      +getRejected(cargaId: String, page: int, size: int): List
+    }
+    class EtlService {
+      -repository: EvaluationRepository
+      -transformationService: TransformationService
+      -driver: Driver
+      -batchSize: int
+      +process(job: CargaJob): void
+    }
+    class TransformationService {
+      +{static} REQUIRED_FIELDS: Set
+      +mapHeaders(headers: String[]): Map
+      +transform(row: String[], indexes: Map, fileName: String, line: int): TransformedRow
+      +safeRow(row: String[]): String
+    }
+    class TransformedRow <<record>> {
+      +mongo: Document
+      +graph: Map
+      +line: int
+    }
+    class RowValidationException
+    class CargaJob {
+      -id: String
+      -fechaInicio: Instant
+      -fechaFin: Instant
+      -estado: Estado
+      -error: String
+      +addFile(file: FileJob): void
+      +finish(): void
+      +fail(message: String): void
+      +snapshot(): CargaReporteDto
+      +toDocument(): Document
+    }
+    class FileJob {
+      -nombre: String
+      -ruta: Path
+      -leidos: AtomicInteger
+      -procesados: AtomicInteger
+      -rechazados: AtomicInteger
+      -duplicados: AtomicInteger
+      -sincronizadosNeo4j: AtomicInteger
+      -duracionMs: long
+      -detalleError: String
+      +pending(): int
+      +addError(fila: int, causa: String, valor: String): void
+      +snapshot(): ArchivoReporteDto
+    }
+    enum Estado {
+      EN_PROCESO
+      EXITOSA
+      EXITOSA_CON_RECHAZOS
+      ERROR
+    }
+    class MongoQueryService {
+      -repository: EvaluationRepository
+      +execute(number: int, filters: QueryFilters): List
+    }
+    class QueryFilters <<record>>
+    class GraphService {
+      -driver: Driver
+      +runQuery(number: int, filtros): List
+      +visualization(filtros): GrafoDto
+      +nodeDetail(id: String): Map
+    }
+    class SearchService {
+      -mongoTemplate: MongoTemplate
+      -repository: EvaluationRepository
+      +search(type: String, text: String): List
+      +getAspirant(correlativo: String): Map
+      +getHistory(correlativo: String): List
+    }
+    class CatalogService {
+      -repository: EvaluationRepository
+      +get(type: String): List
+    }
+    class SavedQueryService {
+      -mongo: MongoTemplate
+      -driver: Driver
+      -policy: CustomQueryPolicy
+      +authorize(key: String): void
+      +list(engine: String): List
+      +save(request: SavedQueryRequest): Map
+      +execute(id: String, confirmed: boolean): Map
+    }
+    class CustomQueryPolicy {
+      +engine(value: String): String
+      +writes(engine: String, code: String): boolean
+      +mongo(code: String): Document
+    }
+  }
+
+  package "repository" {
+    class EvaluationRepository {
+      -mongoTemplate: MongoTemplate
+      +ensureIndexes(): void
+      +insertBatch(documents: List): InsertResult
+      +insertRejected(documents: List): void
+      +rebuildAspirantes(): void
+      +aggregate(collection: String, pipeline: List): List
+      +findAspirante(correlativo: String): Document
+      +findEvaluationsByAspirante(correlativo: String): List
+      +findRejected(cargaId: String, page: int, size: int): List
+      +replaceLoad(document: Document): void
+      +findLoads(limit: int): List
+      +findLoad(id: String): Document
+    }
+    class InsertResult <<record>> {
+      +inserted: int
+      +duplicates: int
+      +failed: int
+      +failedIndexes: List
+    }
+  }
+
+  package "dto" {
+    class CargaReporteDto <<record>> {
+      +id: String
+      +estado: String
+      +duracionMs: long
+      +progreso: int
+      +error: String
+    }
+    class TotalesDto <<record>> {
+      +leidos: int
+      +procesados: int
+      +rechazados: int
+      +duplicados: int
+      +pendientes: int
+      +sincronizadosNeo4j: int
+    }
+    class ArchivoReporteDto <<record>>
+    class ErrorRegistroDto <<record>>
+    class GrafoDto <<record>>
+    class Nodo <<record>>
+    class Relacion <<record>>
+    class SavedQueryRequest <<record>> {
+      +name: String
+      +description: String
+      +engine: String
+      +code: String
+    }
+    class ApiError <<record>>
+  }
+
+  package "config, util y excepciones" {
+    class AsyncConfig
+    class Neo4jConfig
+    class WebConfig
+    class MongoIndexInitializer
+    class Neo4jSchemaInitializer
+    class DotenvEnvironmentPostProcessor
+    class CsvSupport {
+      +{static} detectDelimiter(path: Path): char
+      +{static} reader(path: Path, delimiter: char): CSVReader
+    }
+    class MongoJson {
+      +{static} toMap(document: Document): Map
+      +{static} toList(documents: List): List
+      +{static} normalize(value: Object): Object
+    }
+    class CypherCatalog
+    class GlobalExceptionHandler
+    class ApiException
+  }
+}
+
+package "Infraestructura externa" {
+  class MongoTemplate <<Spring Data>>
+  interface Driver <<Neo4j>>
+  interface ExecutorService <<Java>>
+  class RuntimeException <<Java>>
+  interface ApplicationRunner <<Spring Boot>>
+  interface EnvironmentPostProcessor <<Spring Boot>>
+  interface Ordered <<Spring>>
+  interface WebMvcConfigurer <<Spring MVC>>
+}
+
+CargaController -- "1" CargaService : cargaService (inyección)
+ConsultaMongoController -- "1" MongoQueryService : queryService (inyección)
+GrafoController -- "1" GraphService : graphService (inyección)
+BusquedaController -- "1" SearchService : searchService (inyección)
+CatalogoController -- "1" CatalogService : catalogService (inyección)
+SavedQueryController -- "1" SavedQueryService : service (inyección)
+HealthController -- "1" EvaluationRepository : repository (inyección)
+HealthController -- "1" MongoTemplate : mongoTemplate (inyección)
+HealthController -- "1" Driver : driver (inyección)
+CargaService -- "1" EtlService : etlService (inyección)
+CargaService -- "1" EvaluationRepository : repository (inyección)
+CargaService -- "1" ExecutorService : etlExecutor (inyección)
+CargaService *-- "0..*" CargaJob : jobs / creados por start()
+CargaJob *-- "0..*" FileJob : archivos
+CargaJob -- "1" Estado : estado
+FileJob -- "1" Estado : estado
+CargaJob ..> CargaReporteDto : <<create>> snapshot()
+FileJob ..> ArchivoReporteDto : <<create>> snapshot()
+FileJob *-- "0..100" ErrorRegistroDto : errores creados por addError()
+EtlService -- "1" TransformationService : transformationService (inyección)
+EtlService -- "1" EvaluationRepository : repository (inyección)
+EtlService -- "1" Driver : driver (inyección)
+EtlService ..> CsvSupport : <<call>> detectDelimiter(), reader()
+EtlService ..> CypherCatalog : <<use>> LOAD_BATCH
+EtlService ..> CargaJob : <<use>> parámetro de process()
+TransformationService ..> TransformedRow : <<create>> transform()
+TransformationService ..> RowValidationException : <<create>> validación fallida
+RowValidationException --|> RuntimeException
+MongoQueryService -- "1" EvaluationRepository : repository (inyección)
+MongoQueryService ..> QueryFilters : <<use>> parámetro de execute()
+GraphService -- "1" Driver : driver (inyección)
+GraphService ..> CypherCatalog : <<use>> consultas Cypher
+GraphService ..> GrafoDto : <<create>> visualization()
+SearchService -- "1" MongoTemplate : mongoTemplate (inyección)
+SearchService -- "1" EvaluationRepository : repository (inyección)
+CatalogService -- "1" EvaluationRepository : repository (inyección)
+SavedQueryService -- "1" MongoTemplate : mongo (inyección)
+SavedQueryService -- "1" Driver : driver (inyección)
+SavedQueryService -- "1" CustomQueryPolicy : policy (inyección)
+SavedQueryService ..> SavedQueryRequest : <<use>> parámetro de save()
+EvaluationRepository -- "1" MongoTemplate : mongoTemplate (inyección)
+EvaluationRepository ..> InsertResult : <<create>> insertBatch()
+CargaReporteDto o-- "1" TotalesDto : totales
+CargaReporteDto o-- "0..*" ArchivoReporteDto : archivos
+ArchivoReporteDto o-- "0..100" ErrorRegistroDto : errores compartidos con FileJob
+GrafoDto o-- "0..*" Nodo : nodes
+GrafoDto o-- "0..*" Relacion : links
+AsyncConfig ..> ExecutorService : <<create>> bean etlExecutor()
+Neo4jConfig ..> Driver : <<create>> bean neo4jDriver()
+MongoIndexInitializer -- "1" EvaluationRepository : repository (inyección)
+Neo4jSchemaInitializer -- "1" Driver : driver (inyección)
+Neo4jSchemaInitializer ..> CypherCatalog : <<use>> restricciones e índices
+GlobalExceptionHandler ..> ApiError : <<create>> respuesta de error
+GlobalExceptionHandler ..> ApiException : <<use>> parámetro del manejador
+ApiException --|> RuntimeException
+MongoIndexInitializer ..|> ApplicationRunner
+Neo4jSchemaInitializer ..|> ApplicationRunner
+DotenvEnvironmentPostProcessor ..|> EnvironmentPostProcessor
+DotenvEnvironmentPostProcessor ..|> Ordered
+WebConfig ..|> WebMvcConfigurer
+
+package "Frontend - React" {
+  class main <<entrypoint>>
+  class App <<componente funcional>>
+  class Layout <<componente funcional>>
+  package "pages" {
+    class Dashboard <<componente funcional>>
+    class Carga <<componente funcional>> {
+      archivos: File[]
+      revision: Object[]
+      validando: boolean
+      iniciar()
+      confirmarEnvio()
+      cambiarArchivos(update)
+    }
+    class Consultas <<componente funcional>>
+    class ExploradorGrafos <<componente funcional>>
+    class Buscador <<componente funcional>>
+    class Error404 <<componente funcional>>
+  }
+  package "components" {
+    class UploadDragDrop <<componente funcional>>
+    class TablaResultados <<componente funcional>>
+    class FichaAspirante <<componente funcional>>
+    class ConsultasGuardadas <<componente funcional>>
+    class Grafica <<componente funcional>>
+    class GrafoCanvas <<componente funcional>>
+    class FiltroBar <<componente funcional>>
+    class SelectCampo <<componente funcional>>
+    class KpiCard <<componente funcional>>
+    class Cargando <<componente funcional>>
+    class EstadoError <<componente funcional>>
+  }
+  package "hooks, API y utilidades" {
+    class useCarga <<hook>> {
+      subir(archivos)
+      abrir(id)
+      cargarRechazados(id, pagina, tamano)
+    }
+    class useConsultas <<hook>> {
+      recargar()
+      generarResumen()
+    }
+    class useCatalogos <<hook>>
+    class "api/client" as ApiClient <<instancia Axios>>
+    class "csvValidation.worker" as CsvWorker <<Web Worker>>
+    class csvValidation <<modulo>> {
+      normalizeRecord(record, year)
+      prepareCsv(text, name)
+    }
+    class formato <<modulo>> {
+      formatearNumero(value)
+      formatearFecha(value)
+      formatearValor(value)
+      descargarCsv(nombre, columnas, filas)
+    }
+  }
+}
+
+note right of App
+  React utiliza funciones y hooks, no clases JavaScript.
+  Se representan como clasificadores con estereotipos.
+  <<call>> indica dependencia de llamada o renderizado.
+  No existe herencia entre componentes funcionales.
+  Las instancias de DTO recibidas por constructor pueden
+  compartirse: se modelan con agregación, no con propiedad exclusiva.
+end note
+
+main ..> App : <<call>> monta con BrowserRouter
+App ..> Layout : <<call>> elemento de ruta
+App ..> Dashboard : <<call>> elemento de ruta
+App ..> Carga : <<call>> elemento de ruta
+App ..> Consultas : <<call>> elemento de ruta
+App ..> ExploradorGrafos : <<call>> elemento de ruta
+App ..> Buscador : <<call>> elemento de ruta
+App ..> Error404 : <<call>> elemento de ruta
+Layout ..> ApiClient : <<call>> GET salud
+Dashboard ..> ApiClient : <<call>> GET estadísticas y catálogos
+Dashboard ..> KpiCard : <<call>> renderiza
+Dashboard ..> Grafica : <<call>> renderiza
+Dashboard ..> Cargando : <<call>> renderiza
+Dashboard ..> EstadoError : <<call>> renderiza
+Carga ..> UploadDragDrop : <<call>> renderiza con callbacks
+Carga ..> TablaResultados : <<call>> renderiza
+Carga ..> Cargando : <<call>> renderiza
+Carga ..> useCarga : <<call>> invoca hook
+Carga ..> ApiClient : <<call>> GET historial
+Carga *-- "0..1" CsvWorker : workerRef / crea y termina el Worker
+CsvWorker ..> csvValidation : <<call>> prepareCsv()
+Consultas ..> useConsultas : <<call>> invoca hook
+Consultas ..> useCatalogos : <<call>> invoca hook
+Consultas ..> FiltroBar : <<call>> renderiza
+Consultas ..> SelectCampo : <<call>> renderiza
+Consultas ..> TablaResultados : <<call>> renderiza
+Consultas ..> Grafica : <<call>> renderiza
+Consultas ..> FichaAspirante : <<call>> renderiza
+Consultas ..> ConsultasGuardadas : <<call>> renderiza
+Consultas ..> Cargando : <<call>> renderiza
+Consultas ..> EstadoError : <<call>> renderiza
+ExploradorGrafos ..> ApiClient : <<call>> GET grafo y consultas
+ExploradorGrafos ..> useCatalogos : <<call>> invoca hook
+ExploradorGrafos ..> GrafoCanvas : <<call>> renderiza
+ExploradorGrafos ..> TablaResultados : <<call>> renderiza
+ExploradorGrafos ..> FiltroBar : <<call>> renderiza
+ExploradorGrafos ..> SelectCampo : <<call>> renderiza
+ExploradorGrafos ..> ConsultasGuardadas : <<call>> renderiza
+ExploradorGrafos ..> Cargando : <<call>> renderiza
+ExploradorGrafos ..> EstadoError : <<call>> renderiza
+Buscador ..> ApiClient : <<call>> GET búsqueda, ficha e historial
+Buscador ..> FichaAspirante : <<call>> renderiza
+Buscador ..> TablaResultados : <<call>> renderiza
+Buscador ..> Cargando : <<call>> renderiza
+Buscador ..> EstadoError : <<call>> renderiza
+FichaAspirante ..> TablaResultados : <<call>> renderiza historial
+FichaAspirante ..> formato : <<call>> formatea valores
+TablaResultados ..> formato : <<call>> formatea y exporta CSV
+GrafoCanvas ..> formato : <<call>> etiquetas y colores de nodos
+Grafica ..> formato : <<call>> formatea valores
+UploadDragDrop ..> formato : <<call>> formatea tamaño
+ConsultasGuardadas ..> TablaResultados : <<call>> renderiza
+ConsultasGuardadas ..> ApiClient : <<call>> lista, guarda y ejecuta
+useCarga ..> ApiClient : <<call>> carga, seguimiento y rechazos
+useConsultas ..> ApiClient : <<call>> consulta y resumen
+useCatalogos ..> ApiClient : <<call>> GET catálogos
+
+ApiClient ..> CargaController : <<HTTP>> /api/cargas
+ApiClient ..> ConsultaMongoController : <<HTTP>> /api/consultas/mongo
+ApiClient ..> GrafoController : <<HTTP>> /api/grafo
+ApiClient ..> BusquedaController : <<HTTP>> /api/buscar y /api/aspirantes
+ApiClient ..> CatalogoController : <<HTTP>> /api/catalogos
+ApiClient ..> SavedQueryController : <<HTTP>> /api/consultas/guardadas
+ApiClient ..> HealthController : <<HTTP>> /api/salud
+
+legend
+  -- Asociación: referencia almacenada, sin propiedad del ciclo de vida.
+  o-- Agregación: objetos agrupados que pueden compartirse.
+  *-- Composición: propiedad del ciclo de vida del objeto contenido.
+  --|> Herencia: extends.
+  ..|> Realización: implements.
+  ..> Dependencia explícita: llamada, creación, parámetro o contrato HTTP.
+endlegend
+
+@enduml

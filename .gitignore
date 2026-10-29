@@ -22,3 +22,18 @@ dist/
 .idea/
 .vscode/
 *.iml
+
+# Resultados locales del preprocesamiento (pueden contener datos reales)
+# Pruebas locales (los archivos ya versionados mantienen su seguimiento)
+**/src/test/
+**/tests/
+**/*.test.js
+**/*.test.jsx
+**/*.spec.js
+**/*.spec.jsx
+etl/salida/
+etl/entradas/
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/

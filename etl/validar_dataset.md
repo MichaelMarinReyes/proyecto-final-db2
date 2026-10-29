@@ -24,13 +24,13 @@ Mientras no se encuentre disponible, utilice `muestras/pruebas_especificas_muest
    iconv -f LATIN1 -t UTF-8 archivo.csv > archivo-utf8.csv
    ```
 
-5. Revise los encabezados contra `documentacion/etl-reglas.md`. Los obligatorios son correlativo, materia, año de ingreso y aprobación. Cada fila también necesita una oportunidad válida.
+5. Revise los encabezados contra `docs/etl-reglas.md`. Los obligatorios son correlativo, materia, oportunidad, año de ingreso y aprobación.
 6. Confirme que el separador sea coma, punto y coma o tabulador, y que los campos que contienen separadores estén entre comillas.
 7. Revise el tamaño: máximo 100 MB por archivo y 500 MB por petición con la configuración predeterminada.
 
 ## Carga controlada
 
-1. Inicie las bases, el backend y el frontend siguiendo `documentacion/manual-tecnico.md`.
+1. Inicie las bases, el backend y el frontend siguiendo `docs/manual-tecnico.md`.
 2. Compruebe `GET /api/salud`.
 3. Cargue primero un archivo pequeño desde **Carga de datos**.
 4. Espere el estado final y conserve el reporte.
@@ -72,5 +72,5 @@ Vuelva a cargar el mismo archivo sin modificarlo. Debe aumentar el contador de d
 - Regenerar `resumen_carrera` con `POST /api/consultas/mongo/6/resumen`.
 - Ejecutar las 20 consultas MongoDB y G1–G7.
 - Revisar valores `SIN REGISTRO`, años, edades y variantes de carreras.
-- Actualizar `documentacion/analisis-resultados.md` y `documentacion/conclusiones.md`.
+- Actualizar `docs/analisis-resultados.md` y `docs/conclusiones.md`.
 - Distinguir siempre resultados oficiales de resultados de muestra.
