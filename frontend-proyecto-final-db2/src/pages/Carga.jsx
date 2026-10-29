@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import api from '../api/client';
 import UploadDragDrop from '../components/UploadDragDrop';
 import TablaResultados from '../components/TablaResultados';
@@ -13,6 +13,18 @@ function EstadoBadge({ estado }) {
 export default function Carga() {
   const { reporte, cargando, error, rechazados, subir, cargarRechazados, abrir } = useCarga();
   const [archivos, setArchivos] = useState([]);
+  const [revision, setRevision] = useState(null);
+  const [validando, setValidando] = useState(false);
+  const [errorRevision, setErrorRevision] = useState('');
+  const workerRef = useRef(null);
+  useEffect(() => () => workerRef.current?.terminate(), []);
+  const cambiarArchivos = (update) => {
+    workerRef.current?.terminate();
+    setValidando(false);
+    setRevision(null);
+    setErrorRevision('');
+    setArchivos(update);
+  };
   const [historial, setHistorial] = useState([]);
   const [cargandoHistorial, setCargandoHistorial] = useState(false);
   const [rechazadosVisibles, setRechazadosVisibles] = useState(false);
@@ -43,9 +55,41 @@ export default function Carga() {
   }, [estadoFinal, cargarHistorial]);
 
   const iniciar = async () => {
-    const resultado = await subir(archivos);
+    setErrorRevision('');
+    if (archivos.length > 20 || archivos.reduce((total, file) => total + file.size, 0) > 100 * 1024 * 1024) {
+      setErrorRevision('Selecciona hasta 20 archivos y 100 MB en total. Divide los lotes mayores.');
+      return;
+    }
+    setRevision(null);
+    setValidando(true);
+    try {
+      workerRef.current?.terminate();
+      const worker = new Worker(new URL('../workers/csvValidation.worker.js', import.meta.url), { type: 'module' });
+      workerRef.current = worker;
+      worker.onmessage = ({ data }) => {
+        setValidando(false);
+        if (data.error) setErrorRevision(data.error);
+        else setRevision(data.results);
+        worker.terminate();
+      };
+      worker.onerror = () => {
+        setValidando(false);
+        setErrorRevision('No fue posible revisar el CSV. Verifica su estructura y codificación UTF-8.');
+        worker.terminate();
+      };
+      worker.postMessage(archivos);
+    } catch {
+      setValidando(false);
+      setErrorRevision('No se pudo iniciar la revisión local. No se enviaron datos.');
+    }
+  };
+
+  const confirmarEnvio = async () => {
+    if (!revision?.length || revision.some((item) => item.csv === null)) return;
+    const preparados = revision.map((item) => new File(['\uFEFF', item.csv], item.nombre, { type: 'text/csv;charset=utf-8' }));
+    const resultado = await subir(preparados);
     if (resultado) {
-      setArchivos([]);
+      cambiarArchivos([]);
       setRechazadosVisibles(false);
     }
   };
@@ -102,12 +146,12 @@ export default function Carga() {
       <div className="grid-carga">
         <UploadDragDrop
           archivos={archivos}
-          onArchivos={(nuevos) => setArchivos((actuales) => [...actuales, ...nuevos])}
-          onQuitar={(indice) => setArchivos((actuales) => actuales.filter((_, posicion) => posicion !== indice))}
+          onArchivos={(nuevos) => cambiarArchivos((actuales) => [...actuales, ...nuevos])}
+          onQuitar={(indice) => cambiarArchivos((actuales) => actuales.filter((_, posicion) => posicion !== indice))}
           onSubir={iniciar}
-          cargando={cargando}
+          cargando={cargando || validando}
           progreso={reporte?.progreso ?? 0}
-          error={error}
+          error={errorRevision || error}
         />
 
         <aside className="tarjeta reglas-etl">
@@ -120,9 +164,29 @@ export default function Carga() {
             <li>Los duplicados se omiten mediante un índice único sobre <code>hash_fila</code>.</li>
             <li>La colección <code>aspirantes</code> se reconstruye al finalizar la carga.</li>
           </ul>
-          <p className="ayuda">Columnas mínimas: correlativo_aspirante, materia, año de ingreso y aprobación.</p>
+          <p className="ayuda">Columnas mínimas: correlativo_aspirante, materia, oportunidad, año de ingreso y aprobación.</p>
         </aside>
       </div>
+
+      {validando && <p role="status">Revisando estructura y registros localmente. Todavía no se han enviado datos…</p>}
+      {revision && (
+        <section className="tarjeta" aria-label="Revisión previa" aria-live="polite">
+          <h3>Revisión previa al envío</h3>
+          <p>Los originales no se modifican. Solo se enviará el CSV preparado después de confirmar. El backend volverá a validar los datos.</p>
+          <p>Fecha y año de nacimiento ausentes se conservan como nulos; carrera vacía se convierte a NINGUNO. Los avisos no bloquean el envío.</p>
+          {revision.map((item, index) => (
+            <div key={`${item.nombre}-${index}`}>
+              <h4>{item.nombre}</h4>
+              <p>Leídos: {item.leidos} · Registros inválidos: {item.invalidos} · Avisos: {item.avisos}</p>
+              {item.errores.map((message) => <p role="alert" className="mensaje-error" key={message}>{message}</p>)}
+              {item.detalles.length > 0 && <details><summary>Ver incidencias (máximo 100; numeración de registros sin encabezado)</summary><ul>{item.detalles.map((message, i) => <li key={i}>{message}</li>)}</ul></details>}
+            </div>
+          ))}
+          {revision.some((item) => item.csv === null) && <p role="alert" className="mensaje-error">Envío bloqueado: corrige las filas o la estructura indicadas y vuelve a seleccionar los archivos. No se omiten filas silenciosamente.</p>}
+          <button type="button" className="boton boton-primario" onClick={confirmarEnvio} disabled={cargando || revision.some((item) => item.csv === null)}>Confirmar y enviar datos preparados</button>
+          <button type="button" className="boton boton-secundario" onClick={() => setRevision(null)} disabled={cargando}>Cancelar revisión</button>
+        </section>
+      )}
 
       {reporte && (
         <section className="tarjeta">
@@ -155,7 +219,11 @@ export default function Carga() {
             <div><span>Procesados</span><strong>{formatearNumero(reporte.totales?.procesados)}</strong></div>
             <div><span>Rechazados</span><strong>{formatearNumero(reporte.totales?.rechazados)}</strong></div>
             <div><span>Duplicados omitidos</span><strong>{formatearNumero(reporte.totales?.duplicados)}</strong></div>
+            <div><span>Pendientes de confirmar en MongoDB</span><strong>{formatearNumero(reporte.totales?.pendientes ?? 0)}</strong></div>
+            <div><span>Sincronizados con Neo4j</span><strong>{formatearNumero(reporte.totales?.sincronizadosNeo4j ?? 0)}</strong></div>
           </div>
+          {reporte.error && <p role="alert" className="mensaje-error">{reporte.error}</p>}
+          {reporte.estado === 'ERROR' && <p className="mensaje-aviso">La carga no se completó. Puede haber datos parciales; procesados cuenta filas confirmadas en MongoDB (incluye duplicados), no garantiza sincronización con Neo4j.</p>}
 
           <TablaResultados
             titulo={`archivos-${reporte.id}`}

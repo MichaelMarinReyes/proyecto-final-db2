@@ -7,6 +7,7 @@ import FiltroBar, { SelectCampo } from '../components/FiltroBar';
 import useConsultas from '../hooks/useConsultas';
 import useCatalogos from '../hooks/useCatalogos';
 import ConsultasGuardadas from '../components/ConsultasGuardadas';
+import FichaAspirante from '../components/FichaAspirante';
 import { formatearNumero } from '../utils/formato';
 
 const CONSULTAS = [
@@ -112,8 +113,8 @@ const CONSULTAS = [
   {
     n: 14,
     titulo: 'Intentos promedio por materia',
-    descripcion: 'Para cada aspirante se toma su máxima oportunidad por materia y luego se promedia por materia.',
-    tecnica: '$max · $avg',
+    descripcion: 'Cuenta oportunidades distintas por año y aspirante para cada materia y promedia los intentos registrados. No infiere intentos faltantes a partir de su número.',
+    tecnica: '$group · $sum · $avg',
     columnas: ['materia', 'intentos_promedio', 'aspirantes'],
     grafico: { tipo: 'bar', xKey: 'materia', yKey: 'intentos_promedio', nombreY: 'Intentos promedio' }
   },
@@ -161,11 +162,14 @@ const CONSULTAS = [
     titulo: 'Evolución anual de aprobación',
     descripcion: 'Aprobados, reprobados y porcentaje de aprobación por año de ingreso.',
     tecnica: '$group · $cond',
-    columnas: ['anio', 'total', 'aprobados', 'no_aprobados', 'porcentaje_aprobacion'],
+    columnas: ['anio', 'total', 'aprobados', 'no_aprobados', 'porcentaje_aprobacion', 'porcentaje_no_aprobacion'],
     grafico: {
       tipo: 'line',
       xKey: 'anio',
-      series: [{ key: 'porcentaje_aprobacion', nombre: '% aprobación', color: '#4f46e5' }],
+      series: [
+        { key: 'porcentaje_aprobacion', nombre: '% aprobación', color: '#4f46e5' },
+        { key: 'porcentaje_no_aprobacion', nombre: '% no aprobación', color: '#dc2626' }
+      ],
       unidad: '%'
     }
   }
@@ -321,6 +325,8 @@ export default function Consultas() {
             <EstadoError mensaje={error} onReintentar={recargar} titulo="La consulta no pudo ejecutarse" />
           ) : datos.length === 0 ? (
             <p className="vacio-mini">La consulta no devolvió resultados con los filtros seleccionados.</p>
+          ) : numero === 15 ? (
+            <FichaAspirante ficha={datos[0]} />
           ) : vistaEfectiva === 'grafico' && definicion.grafico ? (
             <Grafica
               tipo={definicion.grafico.tipo}

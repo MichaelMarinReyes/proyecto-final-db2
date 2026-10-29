@@ -456,3 +456,4 @@ tbody tr:hover { background: #f8fafc; }
 .consultas-guardadas pre { white-space: pre-wrap; overflow-wrap: anywhere; max-height: 24rem; overflow: auto; padding: 1rem; border-radius: .5rem; background: #f1f5f9; font-size: .85rem; }
 .guardada-detalle, .guardada-resultado { margin-top: 1rem; }
 @media (max-width: 800px) { .guardadas-grid { grid-template-columns: minmax(0, 1fr); } }
+.ficha-documento pre { max-width: 100%; max-height: 30rem; overflow: auto; white-space: pre-wrap; overflow-wrap: anywhere; font-size: .85rem; }

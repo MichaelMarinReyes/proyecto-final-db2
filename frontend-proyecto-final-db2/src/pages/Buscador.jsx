@@ -3,7 +3,8 @@ import api from '../api/client';
 import TablaResultados from '../components/TablaResultados';
 import Cargando from '../components/Cargando';
 import EstadoError from '../components/EstadoError';
-import { formatearNumero, formatearValor } from '../utils/formato';
+import { formatearNumero } from '../utils/formato';
+import FichaAspirante from '../components/FichaAspirante';
 
 const CRITERIOS = [
   { value: 'aspirante', label: 'Aspirante (correlativo)' },
@@ -162,32 +163,7 @@ export default function Buscador() {
 
       {ficha && !cargandoFicha && (
         <section className="tarjeta">
-          <div className="tarjeta-encabezado">
-            <div>
-              <p className="etiqueta">Ficha del aspirante</p>
-              <h3>{ficha._id}</h3>
-              <p>Documento embebido de la colección <code>aspirantes</code> con su historial de evaluaciones.</p>
-            </div>
-            <span className="chip">{ficha.total_evaluaciones} evaluaciones</span>
-          </div>
-
-          <div className="grid-resumen">
-            <div><span>Sexo</span><strong>{formatearValor(ficha.sexo)}</strong></div>
-            <div><span>Año de nacimiento</span><strong>{formatearValor(ficha.anio_nacimiento)}</strong></div>
-            <div><span>Carreras objetivo</span><strong>{(ficha.carreras_objetivo || []).join(', ') || '—'}</strong></div>
-            <div><span>Materias evaluadas</span><strong>{(ficha.materias || []).length}</strong></div>
-          </div>
-
-          <div className="chips">
-            {(ficha.materias || []).map((materia) => <span key={materia} className="chip chip-materia">{materia}</span>)}
-          </div>
-
-          <h4>Historial de evaluaciones</h4>
-          <TablaResultados
-            titulo={`historial-${ficha._id}`}
-            filas={historial}
-            columnas={['fecha_asignacion', 'materia', 'oportunidad', 'anio_ingreso', 'aprobacion', 'carrera_objetivo', 'municipio_ie', 'tipo_ie']}
-          />
+          <FichaAspirante ficha={ficha} historial={historial} />
         </section>
       )}
     </div>

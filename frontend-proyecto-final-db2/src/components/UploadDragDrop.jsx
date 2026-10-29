@@ -63,7 +63,7 @@ export default function UploadDragDrop({ archivos, onArchivos, onQuitar, onSubir
         <div className="zona-carga-icono">CSV</div>
         <p className="zona-carga-titulo">Arrastra tus archivos aquí</p>
         <p className="zona-carga-texto">o haz clic para seleccionarlos desde tu equipo</p>
-        <p className="zona-carga-nota">Tamaño máximo por archivo: 100 MB</p>
+        <p className="zona-carga-nota">Revisión local: máximo 20 MB por archivo, 20 archivos y 100 MB por lote. Divide los archivos mayores conservando los encabezados.</p>
       </div>
 
       {aviso && <p className="mensaje-aviso">{aviso}</p>}
@@ -108,9 +108,9 @@ export default function UploadDragDrop({ archivos, onArchivos, onQuitar, onSubir
 
       <div className="zona-acciones">
         <button type="button" className="boton boton-primario" onClick={onSubir} disabled={archivos.length === 0 || cargando}>
-          {cargando ? 'Cargando…' : `Iniciar carga${archivos.length > 1 ? ` (${archivos.length} archivos)` : ''}`}
+          {cargando ? 'Procesando…' : `Revisar antes de enviar${archivos.length > 1 ? ` (${archivos.length} archivos)` : ''}`}
         </button>
-        <p className="ayuda">El procesamiento continúa en segundo plano; el reporte se actualiza automáticamente.</p>
+        <p className="ayuda">Primero revisa el resumen local y confirma el envío. Después, el backend procesa la carga en segundo plano.</p>
       </div>
     </section>
   );
