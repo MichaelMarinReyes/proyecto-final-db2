@@ -58,17 +58,23 @@ public class EvaluationRepository {
                     .insertMany(documents, new InsertManyOptions().ordered(false));
             return new InsertResult(documents.size(), 0, 0);
         } catch (MongoBulkWriteException exception) {
+            if (exception.getWriteConcernError() != null) {
+                // A write concern failure has an uncertain outcome, not a confirmed rejection.
+                throw exception;
+            }
             int duplicates = 0;
             int failed = 0;
+            List<Integer> failedIndexes = new ArrayList<>();
             for (var error : exception.getWriteErrors()) {
                 if (error.getCode() == 11000) {
                     duplicates++;
                 } else {
                     failed++;
+                    failedIndexes.add(error.getIndex());
                     log.error("Error al insertar evaluación: {}", error.getMessage());
                 }
             }
-            return new InsertResult(documents.size() - duplicates - failed, duplicates, failed);
+            return new InsertResult(exception.getWriteResult().getInsertedCount(), duplicates, failed, failedIndexes);
         }
     }
 
@@ -86,6 +92,7 @@ public class EvaluationRepository {
      */
     public void rebuildAspirantes() {
         List<Document> pipeline = List.of(
+                Document.parse("{ $sort: { anio_ingreso: 1, oportunidad: 1, fecha_asignacion: 1, _id: 1 } }"),
                 Document.parse("""
                         { $group: {
                             _id: "$correlativo_aspirante",
@@ -94,16 +101,7 @@ public class EvaluationRepository {
                             total_evaluaciones: { $sum: 1 },
                             materias: { $addToSet: "$materia" },
                             carreras_objetivo: { $addToSet: "$carrera_objetivo" },
-                            evaluaciones: { $push: {
-                                fecha_asignacion: "$fecha_asignacion",
-                                materia: "$materia",
-                                oportunidad: "$oportunidad",
-                                anio_ingreso: "$anio_ingreso",
-                                aprobacion: "$aprobacion",
-                                carrera_objetivo: "$carrera_objetivo",
-                                municipio_ie: "$municipio_ie",
-                                tipo_ie: "$tipo_ie"
-                            } }
+                            evaluaciones: { $push: "$$ROOT" }
                         } }
                         """),
                 Document.parse("{ $set: { actualizado_en: \"$$NOW\" } }"),
@@ -165,6 +163,9 @@ public class EvaluationRepository {
         return mongoTemplate.getCollection(LOADS).find(new Document("_id", id)).first();
     }
 
-    public record InsertResult(int inserted, int duplicates, int failed) {
+    public record InsertResult(int inserted, int duplicates, int failed, List<Integer> failedIndexes) {
+        public InsertResult(int inserted, int duplicates, int failed) {
+            this(inserted, duplicates, failed, List.of());
+        }
     }
 }

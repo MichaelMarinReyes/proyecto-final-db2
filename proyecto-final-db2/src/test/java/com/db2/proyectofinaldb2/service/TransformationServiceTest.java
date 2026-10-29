@@ -11,6 +11,16 @@ import org.junit.jupiter.api.Test;
 
 class TransformationServiceTest {
 
+    @Test
+    void rejectsOversizedOrControlCharacterValues() {
+        var service = new TransformationService();
+        var indexes = service.mapHeaders(new String[]{"correlativo", "materia", "oportunidad", "anio_ingreso", "aprobacion"});
+        for (String value : new String[]{"X".repeat(4097), "A\u0000B"}) {
+            assertThrows(TransformationService.RowValidationException.class,
+                    () -> service.transform(new String[]{value, "FISICA", "1", "2024", "SI"}, indexes, "a.csv", 2));
+        }
+    }
+
     private final TransformationService service = new TransformationService();
 
     private static final String[] HEADERS = {
@@ -139,5 +149,48 @@ class TransformationServiceTest {
         assertEquals("SIN REGISTRO", mongo.getString("tipo_ie"));
         assertEquals(null, mongo.get("anio_nacimiento"));
         assertEquals(null, mongo.get("edad_ingreso"));
+    }
+
+    @Test
+    void rejectsAmbiguousApprovalSubstringsAndAcceptsExplicitSeparators() {
+        Map<String, Integer> indexes = service.mapHeaders(HEADERS);
+        String[] row = {"A", "2018-01-15", "M", "2000", "MATEMATICA", "1", "2018",
+                "APROBADO", "MEDICINA", "GUATEMALA", "MIXCO", "PUBLICO"};
+        for (String invalid : new String[]{"DESAPROBADO", "APROBACION PENDIENTE", "APROBADO PARCIAL", "NO APROBADO PENDIENTE"}) {
+            row[7] = invalid;
+            assertThrows(TransformationService.RowValidationException.class,
+                    () -> service.transform(row, indexes, "prueba.csv", 2));
+        }
+        for (String negative : new String[]{"NO_APROBADO", "no-aprobado", "NO", "0"}) {
+            row[7] = negative;
+            assertEquals(false, service.transform(row, indexes, "prueba.csv", 2).mongo().getBoolean("aprobado"));
+        }
+        row[7] = "sí";
+        assertEquals(true, service.transform(row, indexes, "prueba.csv", 2).mongo().getBoolean("aprobado"));
+    }
+
+    @Test
+    void keepsImpossibleCalendarDatesNullInsteadOfAdjustingThem() {
+        String[] row = {"A", "31/02/2024", "M", "2000", "MATEMATICA", "1", "2024",
+                "APROBADO", "MEDICINA", "GUATEMALA", "MIXCO", "PUBLICO"};
+        assertEquals(null, service.transform(row, service.mapHeaders(HEADERS), "prueba.csv", 2).mongo().get("fecha_asignacion"));
+        row[1] = "29/02/2024";
+        assertNotNull(service.transform(row, service.mapHeaders(HEADERS), "prueba.csv", 2).mongo().get("fecha_asignacion"));
+    }
+
+    @Test
+    void preservesPreprocessorProvenanceButRecalculatesDerivedFields() {
+        String[] headers = java.util.Arrays.copyOf(HEADERS, HEADERS.length + 5);
+        System.arraycopy(new String[]{"archivo_origen", "fila_origen", "hash_fila", "aprobado", "edad_ingreso"}, 0,
+                headers, HEADERS.length, 5);
+        String[] row = {"A", "2018-01-15", "M", "2000", "MATEMATICA", "1", "2018",
+                "APROBADO", "MEDICINA", "GUATEMALA", "MIXCO", "PUBLICO", "original.csv", "42", "forjado", "false", "99"};
+        Document result = service.transform(row, service.mapHeaders(headers), "normalizados.csv", 2).mongo();
+        assertEquals("original.csv", result.getString("archivo_origen"));
+        assertEquals("normalizados.csv", result.getString("archivo_carga"));
+        assertEquals(42, result.getInteger("fila_origen"));
+        assertEquals(true, result.getBoolean("aprobado"));
+        assertEquals(18, result.getInteger("edad_ingreso"));
+        assertEquals(64, result.getString("hash_fila").length());
     }
 }

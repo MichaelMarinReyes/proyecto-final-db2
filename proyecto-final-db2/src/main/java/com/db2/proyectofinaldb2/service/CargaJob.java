@@ -53,13 +53,13 @@ public class CargaJob {
     }
 
     public void finish() {
-        boolean anySuccess = archivos.stream().anyMatch(file -> file.getEstado() != Estado.ERROR);
         boolean anyError = archivos.stream().anyMatch(file -> file.getEstado() == Estado.ERROR);
         boolean anyRejected = archivos.stream().anyMatch(file -> file.getRechazados().get() > 0);
 
-        if (!anySuccess) {
+        if (anyError || archivos.isEmpty()) {
             estado = Estado.ERROR;
-        } else if (anyError || anyRejected) {
+            error = "Uno o más archivos no se completaron. Revise los errores y las métricas; puede haber datos parciales";
+        } else if (anyRejected) {
             estado = Estado.EXITOSA_CON_RECHAZOS;
         } else {
             estado = Estado.EXITOSA;
@@ -121,8 +121,10 @@ public class CargaJob {
                 fechaFin == null ? null : fechaFin.toString(),
                 getDuracionMs(),
                 getProgreso(),
-                new CargaReporteDto.TotalesDto(totalLeidos(), totalProcesados(), totalRechazados(), totalDuplicados()),
-                files
+                new CargaReporteDto.TotalesDto(totalLeidos(), totalProcesados(), totalRechazados(), totalDuplicados(),
+                        archivos.stream().mapToInt(FileJob::pending).sum(), archivos.stream().mapToInt(f -> f.getSincronizadosNeo4j().get()).sum()),
+                files,
+                error
         );
     }
 
@@ -140,7 +142,9 @@ public class CargaJob {
                 .append("totales", new Document("leidos", totalLeidos())
                         .append("procesados", totalProcesados())
                         .append("rechazados", totalRechazados())
-                        .append("duplicados", totalDuplicados()))
+                        .append("duplicados", totalDuplicados())
+                        .append("pendientes", archivos.stream().mapToInt(FileJob::pending).sum())
+                        .append("sincronizadosNeo4j", archivos.stream().mapToInt(f -> f.getSincronizadosNeo4j().get()).sum()))
                 .append("archivos", files)
                 .append("error", error);
     }
@@ -153,6 +157,11 @@ public class CargaJob {
         private final AtomicInteger procesados = new AtomicInteger();
         private final AtomicInteger rechazados = new AtomicInteger();
         private final AtomicInteger duplicados = new AtomicInteger();
+        private final AtomicInteger sincronizadosNeo4j = new AtomicInteger();
+
+        public AtomicInteger getSincronizadosNeo4j() { return sincronizadosNeo4j; }
+
+        public int pending() { return Math.max(0, leidos.get() - procesados.get() - rechazados.get()); }
         private final List<CargaReporteDto.ErrorRegistroDto> errores =
                 Collections.synchronizedList(new ArrayList<>());
         private volatile Estado estado = Estado.EN_PROCESO;
@@ -223,7 +232,10 @@ public class CargaJob {
                     duplicados.get(),
                     duracionMs,
                     estado.name(),
-                    copy
+                    copy,
+                    pending(),
+                    sincronizadosNeo4j.get(),
+                    detalleError
             );
         }
 
@@ -241,6 +253,8 @@ public class CargaJob {
                     .append("registrosProcesados", procesados.get())
                     .append("registrosRechazados", rechazados.get())
                     .append("duplicadosOmitidos", duplicados.get())
+                    .append("registrosPendientes", pending())
+                    .append("sincronizadosNeo4j", sincronizadosNeo4j.get())
                     .append("duracionMs", duracionMs)
                     .append("estado", estado.name())
                     .append("errores", errors)

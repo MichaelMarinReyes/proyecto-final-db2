@@ -88,21 +88,40 @@ public class CargaService {
             throw exception;
         }
 
-        jobs.put(job.getId(), job);
-        repository.ensureIndexes();
-        repository.replaceLoad(job.toDocument());
-
-        etlExecutor.submit(() -> {
+        try {
+            repository.ensureIndexes();
+            repository.replaceLoad(job.toDocument());
+            jobs.put(job.getId(), job);
+            etlExecutor.submit(() -> {
             try {
                 etlService.process(job);
             } catch (Exception exception) {
                 log.error("Fallo inesperado en el proceso de carga {}", job.getId(), exception);
-                job.fail("Error inesperado durante la carga: " + exception.getMessage());
+                job.fail("Error inesperado durante la carga. Revise las métricas; puede haber datos parciales");
             } finally {
-                repository.replaceLoad(job.toDocument());
-                cleanup(tempDir);
+                try {
+                    repository.replaceLoad(job.toDocument());
+                } catch (Exception exception) {
+                    log.error("No se pudo persistir el reporte de carga {}", job.getId(), exception);
+                    job.fail("No se pudo guardar el reporte final. El reporte en memoria conserva las métricas; puede haber datos parciales");
+                } finally {
+                    cleanup(tempDir);
+                }
             }
-        });
+            });
+        } catch (RuntimeException exception) {
+            if (jobs.remove(job.getId()) != null) {
+                job.fail("La carga no pudo programarse para su procesamiento");
+                try {
+                    repository.replaceLoad(job.toDocument());
+                } catch (Exception reportException) {
+                    log.warn("No se pudo actualizar el reporte de la carga no iniciada {}", job.getId());
+                }
+            }
+            cleanup(tempDir);
+            log.error("No se pudo iniciar la carga {}", job.getId(), exception);
+            throw new ApiException(HttpStatus.SERVICE_UNAVAILABLE, "No se pudo iniciar la carga. Verifique MongoDB y la disponibilidad del procesador ETL");
+        }
 
         return job.snapshot();
     }

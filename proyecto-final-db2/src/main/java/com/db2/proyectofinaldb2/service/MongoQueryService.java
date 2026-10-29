@@ -387,14 +387,20 @@ public class MongoQueryService {
         addMatch(pipeline, filters);
         pipeline.add(parse("""
                 { $group: {
-                    _id: { materia: "$materia", corr: "$correlativo_aspirante" },
-                    max_oportunidad: { $max: "$oportunidad" }
+                    _id: { materia: "$materia", corr: "$correlativo_aspirante",
+                           anio: "$anio_ingreso", oportunidad: "$oportunidad" }
+                } }
+                """));
+        pipeline.add(parse("""
+                { $group: {
+                    _id: { materia: "$_id.materia", corr: "$_id.corr" },
+                    intentos: { $sum: 1 }
                 } }
                 """));
         pipeline.add(parse("""
                 { $group: {
                     _id: "$_id.materia",
-                    intentos_promedio: { $avg: "$max_oportunidad" },
+                    intentos_promedio: { $avg: "$intentos" },
                     aspirantes: { $sum: 1 }
                 } }
                 """));
@@ -548,7 +554,8 @@ public class MongoQueryService {
                     total: 1,
                     aprobados: 1,
                     no_aprobados: 1,
-                    porcentaje_aprobacion: { $round: [{ $multiply: [{ $divide: ["$aprobados", "$total"] }, 100] }, 2] }
+                    porcentaje_aprobacion: { $round: [{ $multiply: [{ $divide: ["$aprobados", "$total"] }, 100] }, 2] },
+                    porcentaje_no_aprobacion: { $round: [{ $multiply: [{ $divide: ["$no_aprobados", "$total"] }, 100] }, 2] }
                 } }
                 """));
         pipeline.add(sort("anio", 1));

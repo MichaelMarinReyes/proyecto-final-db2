@@ -6,6 +6,7 @@ import java.text.Normalizer;
 import java.time.LocalDate;
 import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
+import java.time.format.ResolverStyle;
 import java.util.Arrays;
 import java.util.Date;
 import java.util.HashMap;
@@ -26,32 +27,39 @@ import org.springframework.stereotype.Service;
 public class TransformationService {
 
     public static final Set<String> REQUIRED_FIELDS =
-            Set.of("correlativo", "materia", "anio_ingreso", "aprobacion");
+            Set.of("correlativo", "materia", "oportunidad", "anio_ingreso", "aprobacion");
 
     private static final Map<String, String> HEADER_ALIASES = buildAliases();
     private static final List<DateTimeFormatter> DATE_FORMATS = List.of(
             DateTimeFormatter.ISO_LOCAL_DATE,
-            DateTimeFormatter.ofPattern("dd/MM/yyyy"),
-            DateTimeFormatter.ofPattern("dd-MM-yyyy"),
-            DateTimeFormatter.ofPattern("yyyy/MM/dd"),
-            DateTimeFormatter.ofPattern("d/M/yyyy"),
-            DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"),
-            DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm:ss"),
-            DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss")
+            DateTimeFormatter.ofPattern("dd/MM/uuuu").withResolverStyle(ResolverStyle.STRICT),
+            DateTimeFormatter.ofPattern("dd-MM-uuuu").withResolverStyle(ResolverStyle.STRICT),
+            DateTimeFormatter.ofPattern("uuuu/MM/dd").withResolverStyle(ResolverStyle.STRICT),
+            DateTimeFormatter.ofPattern("d/M/uuuu").withResolverStyle(ResolverStyle.STRICT),
+            DateTimeFormatter.ofPattern("uuuu-MM-dd HH:mm:ss").withResolverStyle(ResolverStyle.STRICT),
+            DateTimeFormatter.ofPattern("dd/MM/uuuu HH:mm:ss").withResolverStyle(ResolverStyle.STRICT),
+            DateTimeFormatter.ofPattern("uuuu-MM-dd'T'HH:mm:ss").withResolverStyle(ResolverStyle.STRICT)
     );
 
     public Map<String, Integer> mapHeaders(String[] headers) {
         Map<String, Integer> indexes = new HashMap<>();
         for (int i = 0; i < headers.length; i++) {
             String canonical = HEADER_ALIASES.get(normalizeHeader(headers[i]));
-            if (canonical != null && !indexes.containsKey(canonical)) {
-                indexes.put(canonical, i);
+            if (canonical != null) {
+                if (indexes.putIfAbsent(canonical, i) != null) {
+                    throw new IllegalArgumentException("Encabezados ambiguos para el campo: " + canonical);
+                }
             }
         }
         return indexes;
     }
 
     public TransformedRow transform(String[] row, Map<String, Integer> indexes, String fileName, int line) {
+        for (String cell : row) {
+            if (cell != null && (cell.length() > 4096 || cell.codePoints().anyMatch(c -> Character.isISOControl(c) && c != '\n' && c != '\r' && c != '\t'))) {
+                throw new RowValidationException("Campo demasiado largo (máximo 4096 caracteres) o con caracteres de control inválidos");
+            }
+        }
         String correlativo = clean(value(row, indexes, "correlativo"));
         if (correlativo.isBlank()) {
             throw new RowValidationException("correlativo_aspirante vacío");
@@ -72,15 +80,12 @@ public class TransformationService {
             throw new RowValidationException("numero_de_fecha_de_evaluacion inválido");
         }
 
-        String approvalText = clean(value(row, indexes, "aprobacion")).toUpperCase(Locale.ROOT);
+        String approvalText = clean(stripAccents(value(row, indexes, "aprobacion"))
+                .replaceAll("[_-]+", " ")).toUpperCase(Locale.ROOT);
         boolean approved;
-        if (approvalText.contains("NO APROB")) {
-            approved = false;
-        } else if (approvalText.contains("APROB")) {
+        if (Set.of("APROBADO", "SI", "1").contains(approvalText)) {
             approved = true;
-        } else if (approvalText.equals("SI") || approvalText.equals("SÍ") || approvalText.equals("1")) {
-            approved = true;
-        } else if (approvalText.equals("NO") || approvalText.equals("0")) {
+        } else if (Set.of("NO APROBADO", "NO", "0").contains(approvalText)) {
             approved = false;
         } else {
             throw new RowValidationException("aprobacion no reconocida: " + safe(approvalText));
@@ -110,6 +115,8 @@ public class TransformationService {
 
         String hash = hash(correlativo, fecha, sexo, anioNacimiento, materia, oportunidad,
                 anioIngreso, approval, carrera, departamento, municipio, tipo);
+        String sourceFile = defaultIfBlank(clean(value(row, indexes, "archivo_origen")), fileName);
+        Integer sourceLine = parseInt(value(row, indexes, "fila_origen"));
 
         Document mongo = new Document("correlativo_aspirante", correlativo)
                 .append("fecha_asignacion", fechaDate)
@@ -125,7 +132,9 @@ public class TransformationService {
                 .append("departamento_ie", departamento)
                 .append("municipio_ie", municipio)
                 .append("tipo_ie", tipo)
-                .append("archivo_origen", fileName)
+                .append("archivo_origen", sourceFile)
+                .append("archivo_carga", fileName)
+                .append("fila_origen", sourceLine != null && sourceLine > 0 ? sourceLine : line)
                 .append("hash_fila", hash);
 
         String evalKey = correlativo + "|" + materia + "|" + anioIngreso + "|" + oportunidad;
@@ -168,7 +177,7 @@ public class TransformationService {
     }
 
     private String clean(String value) {
-        return value == null ? "" : value.replace("\uFEFF", "").trim().replaceAll("\\s+", " ");
+        return value == null ? "" : value.replace("\uFEFF", "").replaceAll("(?U)\\s+", " ").trim();
     }
 
     private String defaultIfBlank(String value, String fallback) {
@@ -278,6 +287,8 @@ public class TransformationService {
                 "municipio_del_establecimiento");
         register(aliases, "tipo", "tipo_institucion_educativa",
                 "tipo_de_institucion_educativa", "tipo_ie", "sector");
+        register(aliases, "archivo_origen", "archivo_origen");
+        register(aliases, "fila_origen", "fila_origen");
         return aliases;
     }
 

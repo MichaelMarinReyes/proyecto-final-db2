@@ -10,13 +10,16 @@ public record CargaReporteDto(
         long duracionMs,
         int progreso,
         TotalesDto totales,
-        List<ArchivoReporteDto> archivos
+        List<ArchivoReporteDto> archivos,
+        String error
 ) {
     public record TotalesDto(
             int leidos,
             int procesados,
             int rechazados,
-            int duplicados
+            int duplicados,
+            int pendientes,
+            int sincronizadosNeo4j
     ) {
     }
 
@@ -28,7 +31,10 @@ public record CargaReporteDto(
             int duplicadosOmitidos,
             long duracionMs,
             String estado,
-            List<ErrorRegistroDto> errores
+            List<ErrorRegistroDto> errores,
+            int registrosPendientes,
+            int sincronizadosNeo4j,
+            String detalleError
     ) {
     }
 

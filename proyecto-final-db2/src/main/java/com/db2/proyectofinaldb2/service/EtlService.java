@@ -36,6 +36,9 @@ public class EtlService {
         this.repository = repository;
         this.transformationService = transformationService;
         this.driver = driver;
+        if (batchSize < 1 || batchSize > 10000) {
+            throw new IllegalArgumentException("El tamaño de lote ETL debe estar entre 1 y 10000");
+        }
         this.batchSize = batchSize;
     }
 
@@ -52,9 +55,12 @@ public class EtlService {
             } catch (Exception exception) {
                 log.error("Error al procesar el archivo {}", file.getNombre(), exception);
                 file.setEstado(CargaJob.Estado.ERROR);
-                file.setDetalleError(exception.getMessage());
-                file.addError(0, "Error al procesar el archivo: " + exception.getMessage(), null);
+                String message = exception instanceof IllegalArgumentException ? exception.getMessage()
+                        : "No se completó la lectura o persistencia. Puede haber datos parciales; revise las métricas y reintente el archivo corregido cuando las bases estén disponibles";
+                file.setDetalleError(message);
+                file.addError(0, message, null);
             } finally {
+                anyLoaded = anyLoaded || file.getProcesados().get() > 0;
                 file.setDuracionMs(System.currentTimeMillis() - start);
             }
         }
@@ -94,14 +100,18 @@ public class EtlService {
             }
 
             String[] row;
-            int line = 1;
-            while ((row = reader.readNext()) != null) {
-                line++;
+            while (true) {
+                int line = Math.toIntExact(reader.getLinesRead() + 1);
+                row = reader.readNext();
+                if (row == null) break;
                 if (row.length == 0 || Arrays.stream(row).allMatch(value -> value == null || value.isBlank())) {
                     continue;
                 }
                 file.getLeidos().incrementAndGet();
                 try {
+                    if (row.length != header.length) {
+                        throw new TransformationService.RowValidationException("Cantidad de columnas incorrecta: " + row.length + "; esperadas " + header.length);
+                    }
                     TransformationService.TransformedRow transformed =
                             transformationService.transform(row, indexes, file.getNombre(), line);
                     mongoBatch.add(transformed.mongo());
@@ -112,16 +122,19 @@ public class EtlService {
                     rejectedBatch.add(rejectedDocument(job, file, line, exception.getMessage(), row));
                 }
 
-                if (mongoBatch.size() >= batchSize) {
-                    flush(file, mongoBatch, graphBatch, rejectedBatch);
+                if (mongoBatch.size() >= batchSize || rejectedBatch.size() >= batchSize) {
+                    flush(job, file, mongoBatch, graphBatch, rejectedBatch);
                 }
             }
-            flush(file, mongoBatch, graphBatch, rejectedBatch);
+            if (file.getLeidos().get() == 0) {
+                throw new IllegalArgumentException("El archivo no contiene registros de datos");
+            }
+            flush(job, file, mongoBatch, graphBatch, rejectedBatch);
         }
         return file.getProcesados().get();
     }
 
-    private void flush(CargaJob.FileJob file,
+    private void flush(CargaJob job, CargaJob.FileJob file,
                        List<Document> mongoBatch,
                        List<Map<String, Object>> graphBatch,
                        List<Document> rejectedBatch) {
@@ -139,9 +152,28 @@ public class EtlService {
         if (result.failed() > 0) {
             file.getRechazados().addAndGet(result.failed());
             file.addError(0, "No se pudieron insertar " + result.failed() + " registros en MongoDB", null);
+            List<Document> failures = new ArrayList<>();
+            for (int index : result.failedIndexes()) {
+                Document row = mongoBatch.get(index);
+                String cause = "MongoDB rechazó la escritura de esta evaluación";
+                int line = row.getInteger("fila_origen", 0);
+                file.addError(line, cause, row.getString("hash_fila"));
+                failures.add(new Document("carga_id", job.getId()).append("archivo", file.getNombre()).append("fila", line)
+                        .append("causa", cause).append("hash_fila", row.getString("hash_fila"))
+                        .append("fecha", new Date()));
+            }
+            repository.insertRejected(failures);
         }
 
-        loadGraph(graphBatch);
+        List<Map<String, Object>> accepted = new ArrayList<>();
+        for (int i = 0; i < graphBatch.size(); i++) {
+            if (!result.failedIndexes().contains(i)) accepted.add(graphBatch.get(i));
+        }
+        if (result.failed() > 0 && result.failedIndexes().isEmpty()) {
+            throw new IllegalStateException("No se pudieron identificar las filas rechazadas por MongoDB");
+        }
+        loadGraph(accepted);
+        file.getSincronizadosNeo4j().addAndGet(accepted.size());
         mongoBatch.clear();
         graphBatch.clear();
     }

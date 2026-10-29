@@ -58,13 +58,13 @@ public final class CsvSupport {
 
     public static CSVReader reader(Path path, char delimiter) throws IOException {
         CharsetDecoder decoder = StandardCharsets.UTF_8.newDecoder()
-                .onMalformedInput(CodingErrorAction.REPLACE)
-                .onUnmappableCharacter(CodingErrorAction.REPLACE);
+                .onMalformedInput(CodingErrorAction.REPORT)
+                .onUnmappableCharacter(CodingErrorAction.REPORT);
         Reader reader = new BufferedReader(new InputStreamReader(Files.newInputStream(path), decoder));
         CSVParser parser = new CSVParserBuilder()
                 .withSeparator(delimiter)
                 .withIgnoreQuotations(false)
                 .build();
-        return new CSVReaderBuilder(reader).withCSVParser(parser).build();
+        return new CSVReaderBuilder(reader).withCSVParser(parser).withMultilineLimit(100).build();
     }
 }
