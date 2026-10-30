@@ -11,8 +11,17 @@ package "Backend - Spring Boot" {
       +history(): List
       +detail(id: String): Object
     }
-    class ConsultaMongoController
-    class GrafoController
+    class ConsultaMongoController {
+      +execute(numero: int, filtros: QueryFilters): QueryResult
+      +generateCareerSummary(): QueryResult
+      +executeEdited(request: CustomQueryRequest): Map
+    }
+    class GrafoController {
+      +execute(numero: int, filtros): QueryResult
+      +executeEdited(request: CustomQueryRequest): Map
+      +visualization(filtros): GrafoDto
+      +node(id: String): Map
+    }
     class BusquedaController
     class CatalogoController
     class SavedQueryController
@@ -86,13 +95,24 @@ package "Backend - Spring Boot" {
     class MongoQueryService {
       -repository: EvaluationRepository
       +execute(number: int, filters: QueryFilters): List
+      +executeWithPlan(number: int, filters: QueryFilters): QueryResult
     }
     class QueryFilters <<record>>
     class GraphService {
       -driver: Driver
       +runQuery(number: int, filtros): List
+      +runQueryWithPlan(number: int, filtros): QueryResult
       +visualization(filtros): GrafoDto
       +nodeDetail(id: String): Map
+    }
+    class ConsultaEditorService {
+      -mongo: MongoTemplate
+      -driver: Driver
+      -policy: CustomQueryPolicy
+      -maxRows: int
+      -timeout: int
+      +executeMongo(codigo: String): Map
+      +executeNeo4j(codigo: String, parametros: Map): Map
     }
     class SearchService {
       -mongoTemplate: MongoTemplate
@@ -171,6 +191,20 @@ package "Backend - Spring Boot" {
       +engine: String
       +code: String
     }
+    class CustomQueryRequest <<record>> {
+      +codigo: String
+      +parametros: Map
+    }
+    class QueryView <<record>> {
+      +motor: String
+      +codigo: String
+      +nota: String
+      +parametros: Map
+    }
+    class QueryResult <<record>> {
+      +filas: List
+      +consulta: QueryView
+    }
     class ApiError <<record>>
   }
 
@@ -230,8 +264,14 @@ ConfigurableApplicationContext ..> CargaController : <<framework>> registra @Res
 CargaController -- "1" CargaService : cargaService (inyección)
 CargaController ..> CargaReporteDto : <<use>> respuesta de upload()
 ConsultaMongoController -- "1" MongoQueryService : queryService (inyección)
+ConsultaMongoController -- "1" ConsultaEditorService : editorService (inyección)
 ConsultaMongoController ..> QueryFilters : <<create>> execute(), generateCareerSummary()
+ConsultaMongoController ..> QueryResult : <<use>> respuesta de execute() y generateCareerSummary()
+ConsultaMongoController ..> CustomQueryRequest : <<use>> cuerpo de executeEdited()
 GrafoController -- "1" GraphService : graphService (inyección)
+GrafoController -- "1" ConsultaEditorService : editorService (inyección)
+GrafoController ..> QueryResult : <<use>> respuesta de execute()
+GrafoController ..> CustomQueryRequest : <<use>> cuerpo de executeEdited()
 GrafoController ..> GrafoDto : <<use>> respuesta de visualization()
 BusquedaController -- "1" SearchService : searchService (inyección)
 CatalogoController -- "1" CatalogService : catalogService (inyección)
@@ -269,13 +309,22 @@ RowValidationException --|> RuntimeException
 MongoQueryService -- "1" EvaluationRepository : repository (inyección)
 MongoQueryService ..> QueryFilters : <<use>> parámetro de execute()
 MongoQueryService ..> MongoJson : <<call>> normaliza filas BSON
+MongoQueryService ..> QueryResult : <<create>> executeWithPlan()
+MongoQueryService ..> QueryView : <<create>> executeWithPlan()
 MongoQueryService ..> ApiException : <<create>> consulta o correlativo inválido
 GraphService -- "1" Driver : driver (inyección)
 GraphService ..> CypherCatalog : <<use>> consultas Cypher
+GraphService ..> QueryResult : <<create>> runQueryWithPlan()
+GraphService ..> QueryView : <<create>> runQueryWithPlan()
 GraphService ..> GrafoDto : <<create>> visualization()
 GraphService ..> Nodo : <<create>> addNode()
 GraphService ..> Relacion : <<create>> addLink()
 GraphService ..> ApiException : <<create>> filtros o nodo inválidos
+ConsultaEditorService -- "1" MongoTemplate : mongo (inyección)
+ConsultaEditorService -- "1" Driver : driver (inyección)
+ConsultaEditorService -- "1" CustomQueryPolicy : policy (inyección)
+ConsultaEditorService ..> MongoJson : <<call>> normaliza filas MongoDB
+ConsultaEditorService ..> ApiException : <<create>> consulta inválida, timeout o escritura rechazada
 SearchService -- "1" MongoTemplate : mongoTemplate (inyección)
 SearchService -- "1" EvaluationRepository : repository (inyección)
 SearchService ..> MongoJson : <<call>> normaliza búsqueda, ficha e historial
@@ -297,6 +346,7 @@ CargaReporteDto o-- "0..*" ArchivoReporteDto : archivos
 ArchivoReporteDto o-- "0..100" ErrorRegistroDto : errores compartidos con FileJob
 GrafoDto o-- "0..*" Nodo : nodes
 GrafoDto o-- "0..*" Relacion : links
+QueryResult o-- "1" QueryView : consulta
 AsyncConfig ..> ExecutorService : <<create>> bean etlExecutor()
 Neo4jConfig ..> Driver : <<create>> bean neo4jDriver()
 MongoIndexInitializer -- "1" EvaluationRepository : repository (inyección)
@@ -342,6 +392,8 @@ package "Frontend - React" {
     class TablaResultados <<componente funcional>>
     class FichaAspirante <<componente funcional>>
     class ConsultasGuardadas <<componente funcional>>
+    class ConsultaEjecutada <<componente funcional>>
+    class Modal <<componente funcional>>
     class Grafica <<componente funcional>>
     class GrafoCanvas <<componente funcional>>
     class FiltroBar <<componente funcional>>
@@ -416,6 +468,7 @@ Consultas ..> TablaResultados : <<call>> renderiza
 Consultas ..> Grafica : <<call>> renderiza
 Consultas ..> FichaAspirante : <<call>> renderiza
 Consultas ..> ConsultasGuardadas : <<call>> renderiza
+Consultas ..> ConsultaEjecutada : <<call>> renderiza editor
 Consultas ..> Cargando : <<call>> renderiza
 Consultas ..> EstadoError : <<call>> renderiza
 Consultas ..> formato : <<call>> formatea conteos
@@ -426,15 +479,20 @@ ExploradorGrafos ..> TablaResultados : <<call>> renderiza
 ExploradorGrafos ..> FiltroBar : <<call>> renderiza
 ExploradorGrafos ..> SelectCampo : <<call>> renderiza
 ExploradorGrafos ..> ConsultasGuardadas : <<call>> renderiza
+ExploradorGrafos ..> ConsultaEjecutada : <<call>> renderiza editor
 ExploradorGrafos ..> Cargando : <<call>> renderiza
 ExploradorGrafos ..> EstadoError : <<call>> renderiza
 ExploradorGrafos ..> formato : <<call>> etiquetas, propiedades y conteos
 Buscador ..> ApiClient : <<call>> GET búsqueda, ficha e historial
-Buscador ..> FichaAspirante : <<call>> renderiza
+Buscador ..> Modal : <<call>> renderiza ficha
+Buscador ..> FichaAspirante : <<call>> renderiza dentro del modal
 Buscador ..> TablaResultados : <<call>> renderiza
 Buscador ..> Cargando : <<call>> renderiza
 Buscador ..> EstadoError : <<call>> renderiza
 Buscador ..> formato : <<call>> formatea conteos de resultados
+ConsultaEjecutada ..> ApiClient : <<call>> POST consulta editada
+ConsultaEjecutada ..> TablaResultados : <<call>> renderiza resultado editado
+ConsultaEjecutada ..> formato : <<call>> formatea conteo y duración
 FichaAspirante ..> TablaResultados : <<call>> renderiza historial
 FichaAspirante ..> formato : <<call>> formatea valores
 TablaResultados ..> formato : <<call>> formatea y exporta CSV
