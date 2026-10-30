@@ -457,3 +457,45 @@ tbody tr:hover { background: #f8fafc; }
 .guardada-detalle, .guardada-resultado { margin-top: 1rem; }
 @media (max-width: 800px) { .guardadas-grid { grid-template-columns: minmax(0, 1fr); } }
 .ficha-documento pre { max-width: 100%; max-height: 30rem; overflow: auto; white-space: pre-wrap; overflow-wrap: anywhere; font-size: .85rem; }
+
+/* ---------- Modal ---------- */
+.modal-fondo {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: rgba(15, 23, 42, 0.55);
+  backdrop-filter: blur(2px);
+  animation: aparecer 0.15s ease;
+}
+.modal {
+  display: flex;
+  flex-direction: column;
+  width: min(var(--modal-ancho, 980px), 100%);
+  max-height: calc(100vh - 48px);
+  overflow: hidden;
+  background: var(--superficie);
+  border: 1px solid var(--borde);
+  border-radius: 14px;
+  box-shadow: 0 30px 80px rgba(15, 23, 42, 0.35);
+}
+.modal-encabezado {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 18px 22px;
+  border-bottom: 1px solid var(--borde);
+}
+.modal-encabezado h3 { font-size: 18px; overflow-wrap: anywhere; }
+.modal-cuerpo { padding: 20px 22px; overflow: auto; }
+.modal-cuerpo .ficha-aspirante .tarjeta-encabezado { margin-top: 0; }
+
+@media (max-width: 620px) {
+  .modal-fondo { padding: 10px; }
+  .modal { max-height: calc(100vh - 20px); border-radius: 11px; }
+  .modal-encabezado, .modal-cuerpo { padding: 14px 16px; }
+}

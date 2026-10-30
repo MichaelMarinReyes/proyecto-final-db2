@@ -21,7 +21,8 @@ public class BusquedaController {
 
     @GetMapping("/buscar")
     public List<Map<String, Object>> search(@RequestParam String tipo,
-                                            @RequestParam(name = "q") String query) {
+                                            @RequestParam(name = "q", required = false,
+                                                    defaultValue = "") String query) {
         return searchService.search(tipo, query);
     }
 

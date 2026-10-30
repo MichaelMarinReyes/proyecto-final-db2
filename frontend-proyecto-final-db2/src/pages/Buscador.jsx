@@ -5,6 +5,7 @@ import Cargando from '../components/Cargando';
 import EstadoError from '../components/EstadoError';
 import { formatearNumero } from '../utils/formato';
 import FichaAspirante from '../components/FichaAspirante';
+import Modal from '../components/Modal';
 
 const CRITERIOS = [
   { value: 'aspirante', label: 'Aspirante (correlativo)' },
@@ -26,10 +27,16 @@ export default function Buscador() {
   const [historial, setHistorial] = useState([]);
   const [cargandoFicha, setCargandoFicha] = useState(false);
   const [errorFicha, setErrorFicha] = useState(null);
+  const [modalFicha, setModalFicha] = useState(false);
+  const [correlativoFicha, setCorrelativoFicha] = useState(null);
 
   const abrirFicha = async (correlativo) => {
+    setModalFicha(true);
+    setCorrelativoFicha(correlativo);
     setCargandoFicha(true);
     setErrorFicha(null);
+    setFicha(null);
+    setHistorial([]);
     try {
       const [aspiranteRes, historialRes] = await Promise.all([
         api.get(`/aspirantes/${encodeURIComponent(correlativo)}`),
@@ -46,12 +53,17 @@ export default function Buscador() {
     }
   };
 
+  const cerrarFicha = () => {
+    setModalFicha(false);
+    setCorrelativoFicha(null);
+    setFicha(null);
+    setHistorial([]);
+    setErrorFicha(null);
+  };
+
   const buscar = async (event) => {
     event?.preventDefault();
-    if (!texto.trim()) {
-      setError('Ingresa un término de búsqueda.');
-      return;
-    }
+    const termino = texto.trim();
     setBuscando(true);
     setError(null);
     setBuscado(true);
@@ -59,9 +71,9 @@ export default function Buscador() {
     setFicha(null);
     setHistorial([]);
     try {
-      const { data } = await api.get('/buscar', { params: { tipo, q: texto.trim() } });
+      const { data } = await api.get('/buscar', { params: { tipo, q: termino } });
       setResultados(data);
-      if (tipo === 'aspirante' && data.length > 0) {
+      if (tipo === 'aspirante' && termino && data.length > 0) {
         await abrirFicha(data[0]._id);
       }
     } catch (consultaError) {
@@ -104,7 +116,7 @@ export default function Buscador() {
             {buscando ? 'Buscando…' : 'Buscar'}
           </button>
         </form>
-        <p className="ayuda">Consejo: para aspirantes puedes buscar por el correlativo exacto o por su prefijo.</p>
+        <p className="ayuda">Consejo: para aspirantes puedes buscar por el correlativo exacto o por su prefijo. Si dejas el término vacío, verás un listado general de hasta 50 registros.</p>
       </section>
 
       {buscando && <Cargando mensaje="Buscando coincidencias…" />}
@@ -112,7 +124,11 @@ export default function Buscador() {
 
       {buscado && !buscando && !error && resultados.length === 0 && (
         <section className="tarjeta">
-          <p className="vacio-mini">No se encontraron resultados para “{texto}”.</p>
+          <p className="vacio-mini">
+            {texto.trim()
+              ? `No se encontraron resultados para “${texto}”.`
+              : 'No hay registros disponibles para este criterio.'}
+          </p>
         </section>
       )}
 
@@ -122,7 +138,7 @@ export default function Buscador() {
             <div>
               <p className="etiqueta">Coincidencias</p>
               <h3>Aspirantes encontrados</h3>
-              <p>Selecciona un aspirante para abrir su ficha.</p>
+              <p>Selecciona un aspirante para abrir su ficha en una ventana modal.</p>
             </div>
             <span className="chip">{formatearNumero(resultados.length)} resultados</span>
           </div>
@@ -131,7 +147,7 @@ export default function Buscador() {
               <button
                 key={aspirante._id}
                 type="button"
-                className={`resultado-item ${ficha?._id === aspirante._id ? 'activo' : ''}`}
+                className={`resultado-item ${modalFicha && ficha?._id === aspirante._id ? 'activo' : ''}`}
                 onClick={() => abrirFicha(aspirante._id)}
               >
                 <div>
@@ -158,14 +174,24 @@ export default function Buscador() {
         </section>
       )}
 
-      {cargandoFicha && <Cargando mensaje="Cargando ficha del aspirante…" />}
-      {errorFicha && <EstadoError mensaje={errorFicha} onReintentar={() => ficha?._id && abrirFicha(ficha._id)} titulo="No se pudo cargar la ficha" />}
-
-      {ficha && !cargandoFicha && (
-        <section className="tarjeta">
+      <Modal
+        abierto={modalFicha}
+        titulo={ficha?._id || correlativoFicha || 'Ficha del aspirante'}
+        subtitulo="Ficha del aspirante"
+        onCerrar={cerrarFicha}
+      >
+        {cargandoFicha && <Cargando mensaje="Cargando ficha del aspirante…" />}
+        {!cargandoFicha && errorFicha && (
+          <EstadoError
+            mensaje={errorFicha}
+            onReintentar={() => correlativoFicha && abrirFicha(correlativoFicha)}
+            titulo="No se pudo cargar la ficha"
+          />
+        )}
+        {!cargandoFicha && !errorFicha && ficha && (
           <FichaAspirante ficha={ficha} historial={historial} />
-        </section>
-      )}
+        )}
+      </Modal>
     </div>
   );
 }

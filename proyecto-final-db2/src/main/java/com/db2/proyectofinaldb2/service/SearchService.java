@@ -24,14 +24,15 @@ public class SearchService {
         this.repository = repository;
     }
 
+    /**
+     * Busca por el criterio indicado. Un término vacío o nulo no es un error: se
+     * interpreta como listado general y cada búsqueda aplica su propio límite.
+     */
     public List<Map<String, Object>> search(String type, String text) {
         if (type == null || type.isBlank()) {
             throw new ApiException(HttpStatus.BAD_REQUEST, "Debe indicar el tipo de búsqueda");
         }
-        if (text == null || text.isBlank()) {
-            throw new ApiException(HttpStatus.BAD_REQUEST, "Debe ingresar un término de búsqueda");
-        }
-        String query = text.trim();
+        String query = text == null ? "" : text.trim();
         return switch (type.toLowerCase(Locale.ROOT)) {
             case "aspirante" -> searchAspirants(query);
             case "carrera" -> searchCareers(query);
@@ -61,7 +62,8 @@ public class SearchService {
         Query query = new Query(Criteria.where("_id")
                 .regex(java.util.regex.Pattern.compile("^" + java.util.regex.Pattern.quote(text),
                         java.util.regex.Pattern.CASE_INSENSITIVE)))
-                .limit(50);
+                .limit(50)
+                .with(org.springframework.data.domain.Sort.by("_id"));
         query.fields().include("_id", "sexo", "total_evaluaciones", "materias", "carreras_objetivo");
         return MongoJson.toList(mongoTemplate.find(query, Document.class, EvaluationRepository.ASPIRANTS));
     }
