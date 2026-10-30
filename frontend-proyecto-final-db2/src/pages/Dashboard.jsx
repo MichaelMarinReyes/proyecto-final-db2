@@ -74,7 +74,6 @@ export default function Dashboard() {
         <div>
           <p className="eyebrow">Resumen general</p>
           <h2>Panorama de las pruebas específicas</h2>
-          <p>Indicadores calculados con agregaciones de MongoDB sobre la colección <code>evaluaciones</code>.</p>
         </div>
         <button type="button" className="boton boton-secundario" onClick={cargar}>Actualizar datos</button>
       </header>

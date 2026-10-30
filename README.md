@@ -170,6 +170,8 @@ Para cargar el dataset real, descargue los CSV desde el portal y súbalos desde 
 
 ## Documentación
 
+- [Manual técnico completo (DOCX)](documentacion/manual_tecnico.docx)
+- [Diagrama de arquitectura y estructura](documentacion/diagrama_estructura.wsd)
 - [Diagrama de clases backend y frontend](documentacion/diagrama_de_clases.wsd)
 - [Manual técnico](docs/manual-tecnico.md)
 - [Manual de usuario](docs/manual-usuario.md)

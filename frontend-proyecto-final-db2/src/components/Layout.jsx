@@ -121,11 +121,6 @@ export default function Layout() {
         <main className="contenido">
           <Outlet context={{ salud }} />
         </main>
-
-        <footer className="pie">
-          <span>Proyecto Final · Sistemas de Bases de Datos 2</span>
-          <span>MongoDB + Neo4j + Spring Boot + React</span>
-        </footer>
       </div>
     </div>
   );

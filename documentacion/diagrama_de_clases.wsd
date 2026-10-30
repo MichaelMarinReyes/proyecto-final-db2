@@ -1,5 +1,4 @@
-@startuml
-title Diagrama de clases del proyecto: backend y frontend
+@startuml Diagrama de clases
 
 package "Backend - Spring Boot" {
   class ProyectoFinalDb2Application {
@@ -198,6 +197,11 @@ package "Backend - Spring Boot" {
 }
 
 package "Infraestructura externa" {
+  class SpringApplication <<Spring Boot>> {
+    +{static} run(applicationClass: Class, args: String[]): ConfigurableApplicationContext
+  }
+  interface ConfigurableApplicationContext <<Spring>>
+  interface ConfigurableEnvironment <<Spring>>
   class MongoTemplate <<Spring Data>>
   interface Driver <<Neo4j>>
   interface ExecutorService <<Java>>
@@ -208,12 +212,31 @@ package "Infraestructura externa" {
   interface WebMvcConfigurer <<Spring MVC>>
 }
 
+ProyectoFinalDb2Application ..> SpringApplication : <<call>> main() invoca run()
+SpringApplication ..> ProyectoFinalDb2Application : <<use>> fuente @SpringBootApplication
+SpringApplication ..> ConfigurableApplicationContext : <<create>> inicia el contexto
+SpringApplication ..> DotenvEnvironmentPostProcessor : <<framework>> carga mediante META-INF/spring.factories
+DotenvEnvironmentPostProcessor ..> ConfigurableEnvironment : <<use>> añade propiedades dotenv
+SpringApplication ..> ConfigurableEnvironment : <<framework>> prepara el entorno
+ConfigurableApplicationContext ..> AsyncConfig : <<framework>> registra @Configuration
+ConfigurableApplicationContext ..> Neo4jConfig : <<framework>> registra @Configuration
+ConfigurableApplicationContext ..> WebConfig : <<framework>> registra @Configuration y CORS
+ConfigurableApplicationContext ..> MongoIndexInitializer : <<framework>> crea bean @Component
+ConfigurableApplicationContext ..> Neo4jSchemaInitializer : <<framework>> crea bean @Component
+SpringApplication ..> ApplicationRunner : <<call>> run() después de crear el contexto
+ConfigurableApplicationContext ..> GlobalExceptionHandler : <<framework>> registra @RestControllerAdvice
+ConfigurableApplicationContext ..> CargaController : <<framework>> registra @RestController e inyecta servicios
+
 CargaController -- "1" CargaService : cargaService (inyección)
+CargaController ..> CargaReporteDto : <<use>> respuesta de upload()
 ConsultaMongoController -- "1" MongoQueryService : queryService (inyección)
+ConsultaMongoController ..> QueryFilters : <<create>> execute(), generateCareerSummary()
 GrafoController -- "1" GraphService : graphService (inyección)
+GrafoController ..> GrafoDto : <<use>> respuesta de visualization()
 BusquedaController -- "1" SearchService : searchService (inyección)
 CatalogoController -- "1" CatalogService : catalogService (inyección)
 SavedQueryController -- "1" SavedQueryService : service (inyección)
+SavedQueryController ..> SavedQueryRequest : <<use>> cuerpo JSON validado de save()
 HealthController -- "1" EvaluationRepository : repository (inyección)
 HealthController -- "1" MongoTemplate : mongoTemplate (inyección)
 HealthController -- "1" Driver : driver (inyección)
@@ -221,6 +244,10 @@ CargaService -- "1" EtlService : etlService (inyección)
 CargaService -- "1" EvaluationRepository : repository (inyección)
 CargaService -- "1" ExecutorService : etlExecutor (inyección)
 CargaService *-- "0..*" CargaJob : jobs / creados por start()
+CargaService ..> FileJob : <<create>> un archivo por entrada multipart
+CargaService ..> CargaReporteDto : <<use>> resultado de start()
+CargaService ..> MongoJson : <<call>> toMap(), toList()
+CargaService ..> ApiException : <<create>> validación y disponibilidad
 CargaJob *-- "0..*" FileJob : archivos
 CargaJob -- "1" Estado : estado
 FileJob -- "1" Estado : estado
@@ -233,21 +260,36 @@ EtlService -- "1" Driver : driver (inyección)
 EtlService ..> CsvSupport : <<call>> detectDelimiter(), reader()
 EtlService ..> CypherCatalog : <<use>> LOAD_BATCH
 EtlService ..> CargaJob : <<use>> parámetro de process()
+EtlService ..> TransformedRow : <<use>> resultado de transform()
+EtlService ..> InsertResult : <<use>> resultado de insertBatch()
+EtlService ..> RowValidationException : <<use>> captura rechazo por fila
 TransformationService ..> TransformedRow : <<create>> transform()
 TransformationService ..> RowValidationException : <<create>> validación fallida
 RowValidationException --|> RuntimeException
 MongoQueryService -- "1" EvaluationRepository : repository (inyección)
 MongoQueryService ..> QueryFilters : <<use>> parámetro de execute()
+MongoQueryService ..> MongoJson : <<call>> normaliza filas BSON
+MongoQueryService ..> ApiException : <<create>> consulta o correlativo inválido
 GraphService -- "1" Driver : driver (inyección)
 GraphService ..> CypherCatalog : <<use>> consultas Cypher
 GraphService ..> GrafoDto : <<create>> visualization()
+GraphService ..> Nodo : <<create>> addNode()
+GraphService ..> Relacion : <<create>> addLink()
+GraphService ..> ApiException : <<create>> filtros o nodo inválidos
 SearchService -- "1" MongoTemplate : mongoTemplate (inyección)
 SearchService -- "1" EvaluationRepository : repository (inyección)
+SearchService ..> MongoJson : <<call>> normaliza búsqueda, ficha e historial
+SearchService ..> ApiException : <<create>> búsqueda inválida o ficha inexistente
 CatalogService -- "1" EvaluationRepository : repository (inyección)
+CatalogService ..> MongoJson : <<call>> normaliza resultados del catálogo
+CatalogService ..> ApiException : <<create>> catálogo no permitido
 SavedQueryService -- "1" MongoTemplate : mongo (inyección)
 SavedQueryService -- "1" Driver : driver (inyección)
 SavedQueryService -- "1" CustomQueryPolicy : policy (inyección)
 SavedQueryService ..> SavedQueryRequest : <<use>> parámetro de save()
+SavedQueryService ..> MongoJson : <<call>> normaliza definiciones y resultados MongoDB
+SavedQueryService ..> ApiException : <<create>> autorización, política o ejecución fallida
+CustomQueryPolicy ..> ApiException : <<create>> invalid()
 EvaluationRepository -- "1" MongoTemplate : mongoTemplate (inyección)
 EvaluationRepository ..> InsertResult : <<create>> insertBatch()
 CargaReporteDto o-- "1" TotalesDto : totales
@@ -268,6 +310,13 @@ Neo4jSchemaInitializer ..|> ApplicationRunner
 DotenvEnvironmentPostProcessor ..|> EnvironmentPostProcessor
 DotenvEnvironmentPostProcessor ..|> Ordered
 WebConfig ..|> WebMvcConfigurer
+
+note right of ConfigurableApplicationContext
+  Las relaciones <<framework>> representan registro e
+  integración por Spring, no llamadas explícitas desde main().
+  El escaneo del paquete raíz descubre también los demás
+  controladores, servicios y componentes anotados.
+end note
 
 package "Frontend - React" {
   class main <<entrypoint>>
@@ -350,11 +399,13 @@ Dashboard ..> KpiCard : <<call>> renderiza
 Dashboard ..> Grafica : <<call>> renderiza
 Dashboard ..> Cargando : <<call>> renderiza
 Dashboard ..> EstadoError : <<call>> renderiza
+Dashboard ..> formato : <<call>> formatea indicadores
 Carga ..> UploadDragDrop : <<call>> renderiza con callbacks
 Carga ..> TablaResultados : <<call>> renderiza
 Carga ..> Cargando : <<call>> renderiza
 Carga ..> useCarga : <<call>> invoca hook
 Carga ..> ApiClient : <<call>> GET historial
+Carga ..> formato : <<call>> formatea métricas, fechas y duración
 Carga *-- "0..1" CsvWorker : workerRef / crea y termina el Worker
 CsvWorker ..> csvValidation : <<call>> prepareCsv()
 Consultas ..> useConsultas : <<call>> invoca hook
@@ -367,6 +418,7 @@ Consultas ..> FichaAspirante : <<call>> renderiza
 Consultas ..> ConsultasGuardadas : <<call>> renderiza
 Consultas ..> Cargando : <<call>> renderiza
 Consultas ..> EstadoError : <<call>> renderiza
+Consultas ..> formato : <<call>> formatea conteos
 ExploradorGrafos ..> ApiClient : <<call>> GET grafo y consultas
 ExploradorGrafos ..> useCatalogos : <<call>> invoca hook
 ExploradorGrafos ..> GrafoCanvas : <<call>> renderiza
@@ -376,11 +428,13 @@ ExploradorGrafos ..> SelectCampo : <<call>> renderiza
 ExploradorGrafos ..> ConsultasGuardadas : <<call>> renderiza
 ExploradorGrafos ..> Cargando : <<call>> renderiza
 ExploradorGrafos ..> EstadoError : <<call>> renderiza
+ExploradorGrafos ..> formato : <<call>> etiquetas, propiedades y conteos
 Buscador ..> ApiClient : <<call>> GET búsqueda, ficha e historial
 Buscador ..> FichaAspirante : <<call>> renderiza
 Buscador ..> TablaResultados : <<call>> renderiza
 Buscador ..> Cargando : <<call>> renderiza
 Buscador ..> EstadoError : <<call>> renderiza
+Buscador ..> formato : <<call>> formatea conteos de resultados
 FichaAspirante ..> TablaResultados : <<call>> renderiza historial
 FichaAspirante ..> formato : <<call>> formatea valores
 TablaResultados ..> formato : <<call>> formatea y exporta CSV
@@ -408,6 +462,7 @@ legend
   --|> Herencia: extends.
   ..|> Realización: implements.
   ..> Dependencia explícita: llamada, creación, parámetro o contrato HTTP.
+  <<framework>> Integración gestionada por Spring mediante anotaciones o spring.factories.
 endlegend
 
 @enduml

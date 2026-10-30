@@ -1,0 +1,46 @@
+@startuml Diagrama de arquitectura
+
+actor "Usuario" as Usuario
+
+package "Capa de presentación" {
+  node "Cliente React\nNavegador web" as Cliente {
+    component "SPA React\nCarga de CSV, consultas, búsqueda\ny visualización de resultados" as React
+  }
+}
+
+package "Capa de aplicación" {
+  node "Servidor Spring Boot\nJava 21 · Puerto HTTP habitual: 8080" as Servidor {
+    component "API REST\nServicios de negocio\nValidación y procesamiento ETL" as Backend
+  }
+}
+
+package "Capa de persistencia - Docker Compose" {
+  node "Contenedor Docker: db2-mongo" {
+    database "MongoDB 7\nPuerto: 27017\nEvaluaciones, aspirantes,\nreportes y consultas guardadas" as Mongo
+    artifact "Volumen persistente\nmongo_data" as MongoVolume
+  }
+  node "Contenedor Docker: db2-neo4j" {
+    database "Neo4j 5 Community\nBolt: 7687\nNodos, relaciones y recorridos" as Neo4j
+    artifact "Volúmenes persistentes\nneo4j_data / neo4j_logs" as NeoVolume
+  }
+}
+
+Usuario --> React : utiliza la aplicación
+React --> Backend : HTTP / API REST\nJSON y archivos CSV
+Backend --> Mongo : protocolo MongoDB / TCP\nLectura y escritura documental
+Backend --> Neo4j : protocolo Bolt / TCP\nConsultas Cypher y persistencia del grafo
+Mongo -- MongoVolume : almacenamiento
+Neo4j -- NeoVolume : almacenamiento y logs
+
+note bottom of Cliente
+El cliente accede a las bases únicamente mediante la API.
+No contiene credenciales ni conexiones directas a las bases.
+end note
+
+note bottom of Servidor
+El backend valida los datos y coordina ambas bases.
+React y Spring Boot se ejecutan fuera de Docker
+en la configuración actual; Compose contiene las bases.
+end note
+
+@enduml
