@@ -56,7 +56,7 @@ public class MongoQueryService {
             case 19 -> topCareersByDepartment(filters);
             case 20 -> approvalEvolutionByYear(filters);
             default -> throw new ApiException(HttpStatus.NOT_FOUND,
-                    "La consulta " + number + " no existe. Las consultas válidas van de 1 a 20");
+                    "La consulta de MongoDB " + number + " no existe. Las consultas válidas van de 1 a 20 (18 aggregation pipelines y 2 consultas documentales)");
         };
         List<Map<String, Object>> rows = plan.datos() != null ? plan.datos()
                 : MongoJson.toList(repository.aggregate(
@@ -240,7 +240,7 @@ public class MongoQueryService {
         return new MongoQueryPlan(
                 aggregateCommand(EvaluationRepository.CAREER_SUMMARY, read),
                 MongoJson.toList(repository.aggregate(EvaluationRepository.CAREER_SUMMARY, read)),
-                "La tabla se lee de la colección resumen_carrera. La regeneración ejecuta $merge sobre evaluaciones y no está disponible desde el editor.");
+                "La tabla se lee de la colección resumen_carrera mediante un aggregation pipeline. La regeneración ejecuta otro aggregation pipeline que termina en $merge sobre evaluaciones y no está disponible desde el editor.");
     }
 
     // 7. Promedio de edad de aprobados por carrera y tipo de institución

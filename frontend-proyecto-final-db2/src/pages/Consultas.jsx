@@ -14,6 +14,7 @@ import { formatearNumero } from '../utils/formato';
 const CONSULTAS = [
   {
     n: 1,
+    operacion: 'aggregate',
     titulo: 'Aspirantes por tipo de institución',
     descripcion: 'Cuenta aspirantes únicos agrupados por tipo de institución educativa. Usa dos etapas de $group para no duplicar a quienes tienen varias evaluaciones.',
     tecnica: '$group · $sum',
@@ -22,6 +23,7 @@ const CONSULTAS = [
   },
   {
     n: 2,
+    operacion: 'aggregate',
     titulo: 'Aprobados por materia',
     descripcion: 'Filtra las evaluaciones aprobadas y cuenta cuántas hay por materia.',
     tecnica: '$match · $group',
@@ -30,6 +32,7 @@ const CONSULTAS = [
   },
   {
     n: 3,
+    operacion: 'aggregate',
     titulo: 'Aprobados por carrera y año',
     descripcion: 'Cantidad de aspirantes únicos aprobados, agrupada por carrera objetivo y año de ingreso.',
     tecnica: '$group compuesto',
@@ -37,6 +40,7 @@ const CONSULTAS = [
   },
   {
     n: 4,
+    operacion: 'aggregate',
     titulo: 'Porcentaje de aprobación por materia',
     descripcion: 'Calcula la tasa de aprobación por materia con $cond, $divide y $round.',
     tecnica: '$cond · $divide',
@@ -45,6 +49,7 @@ const CONSULTAS = [
   },
   {
     n: 5,
+    operacion: 'aggregate',
     titulo: 'Edad promedio por carrera',
     descripcion: 'Promedio de edad de ingreso por carrera objetivo, contando una vez a cada aspirante.',
     tecnica: '$avg · $round',
@@ -53,14 +58,16 @@ const CONSULTAS = [
   },
   {
     n: 6,
+    operacion: 'aggregate',
     titulo: 'Resumen por carrera ($merge)',
     descripcion: 'Genera la colección auxiliar resumen_carrera con $merge y luego la consulta. Incluye totales, aprobados, reprobados, tasa y edad promedio.',
-    tecnica: '$merge · $out auxiliar',
+    tecnica: '$merge · $group',
     columnas: ['carrera', 'total_evaluaciones', 'total_aspirantes', 'aprobados', 'reprobados', 'tasa_aprobacion', 'promedio_edad'],
     esResumen: true
   },
   {
     n: 7,
+    operacion: 'aggregate',
     titulo: 'Edad de aprobados por carrera y tipo',
     descripcion: 'Cruza la edad promedio de los aprobados según carrera objetivo y tipo de institución.',
     tecnica: '$group compuesto · $avg',
@@ -68,6 +75,7 @@ const CONSULTAS = [
   },
   {
     n: 8,
+    operacion: 'aggregate',
     titulo: 'Aprobados por municipio y carrera',
     descripcion: 'Distribución de aspirantes únicos aprobados por municipio de la institución y carrera objetivo.',
     tecnica: '$group + $limit',
@@ -75,6 +83,7 @@ const CONSULTAS = [
   },
   {
     n: 9,
+    operacion: 'aggregate',
     titulo: 'Evaluaciones por mes y materia',
     descripcion: 'Evaluaciones de instituciones públicas agrupadas por mes de asignación y materia. Usa $month sobre la fecha.',
     tecnica: '$month · $group',
@@ -82,6 +91,7 @@ const CONSULTAS = [
   },
   {
     n: 10,
+    operacion: 'aggregate',
     titulo: 'Top 5 carreras (16 a 18 años)',
     descripcion: 'Carreras más demandadas por aspirantes de 16 a 18 años, contando aspirantes únicos.',
     tecnica: '$addToSet · $size',
@@ -90,14 +100,16 @@ const CONSULTAS = [
   },
   {
     n: 11,
+    operacion: 'find',
     titulo: 'Historial de un aspirante',
     descripcion: 'Devuelve todas las evaluaciones de un correlativo, ordenadas por año, oportunidad y fecha.',
-    tecnica: '$find + $sort',
+    tecnica: 'find + $sort',
     columnas: ['fecha_asignacion', 'materia', 'oportunidad', 'anio_ingreso', 'aprobacion', 'carrera_objetivo'],
     requiereCorrelativo: true
   },
   {
     n: 12,
+    operacion: 'aggregate',
     titulo: 'Distribución por sexo y tipo',
     descripcion: 'Cantidad de aspirantes por sexo y tipo de institución educativa.',
     tecnica: '$group compuesto',
@@ -105,6 +117,7 @@ const CONSULTAS = [
   },
   {
     n: 13,
+    operacion: 'aggregate',
     titulo: 'Tasa de aprobación por edad',
     descripcion: 'Muestra cuántas evaluaciones hubo por edad y qué porcentaje resultó aprobado.',
     tecnica: '$group · $divide',
@@ -113,6 +126,7 @@ const CONSULTAS = [
   },
   {
     n: 14,
+    operacion: 'aggregate',
     titulo: 'Intentos promedio por materia',
     descripcion: 'Cuenta oportunidades distintas por año y aspirante para cada materia y promedia los intentos registrados. No infiere intentos faltantes a partir de su número.',
     tecnica: '$group · $sum · $avg',
@@ -121,14 +135,16 @@ const CONSULTAS = [
   },
   {
     n: 15,
+    operacion: 'find',
     titulo: 'Ficha completa del aspirante',
     descripcion: 'Documento embebido de la colección aspirantes, con su historial completo de evaluaciones.',
-    tecnica: 'Modelo embebido · $find',
+    tecnica: 'find · modelo embebido',
     columnas: ['_id', 'sexo', 'anio_nacimiento', 'total_evaluaciones', 'materias', 'carreras_objetivo'],
     requiereCorrelativo: true
   },
   {
     n: 16,
+    operacion: 'aggregate',
     titulo: 'Reprobados en primer intento por carrera',
     descripcion: 'Carreras con más aspirantes reprobados en su primera oportunidad.',
     tecnica: '$match · $addToSet',
@@ -137,6 +153,7 @@ const CONSULTAS = [
   },
   {
     n: 17,
+    operacion: 'aggregate',
     titulo: 'Top municipios por aspirantes',
     descripcion: 'Cinco municipios con mayor cantidad de aspirantes únicos.',
     tecnica: '$addToSet · $size',
@@ -145,6 +162,7 @@ const CONSULTAS = [
   },
   {
     n: 18,
+    operacion: 'aggregate',
     titulo: 'Aprobación por tipo de institución',
     descripcion: 'Compara la tasa de aprobación entre instituciones públicas y privadas.',
     tecnica: '$cond · $round',
@@ -153,6 +171,7 @@ const CONSULTAS = [
   },
   {
     n: 19,
+    operacion: 'aggregate',
     titulo: 'Top 3 carreras por departamento',
     descripcion: 'Usa $setWindowFields para rankear las carreras más demandadas dentro de cada departamento.',
     tecnica: '$setWindowFields · $rank',
@@ -160,6 +179,7 @@ const CONSULTAS = [
   },
   {
     n: 20,
+    operacion: 'aggregate',
     titulo: 'Evolución anual de aprobación',
     descripcion: 'Aprobados, reprobados y porcentaje de aprobación por año de ingreso.',
     tecnica: '$group · $cond',
@@ -216,9 +236,9 @@ export default function Consultas() {
     <div className="pagina pagina-ancha">
       <header className="pagina-encabezado">
         <div>
-          <p className="eyebrow">20 agregaciones</p>
+          <p className="eyebrow">20 consultas · MongoDB</p>
           <h2>Consultas analíticas en MongoDB</h2>
-          <p>Selecciona una consulta, aplica filtros y revisa el resultado como gráfica o tabla.</p>
+          <p>Selecciona una consulta (aggregation pipeline o consulta documental) y revisa el resultado como gráfica o tabla.</p>
         </div>
         <button type="button" className="boton boton-secundario" onClick={recargar} disabled={cargando}>
           {cargando ? 'Ejecutando…' : 'Ejecutar de nuevo'}
@@ -251,7 +271,7 @@ export default function Consultas() {
         <section className="tarjeta consulta-detalle">
           <div className="tarjeta-encabezado">
             <div>
-              <p className="etiqueta">Consulta {definicion.n}</p>
+              <p className="etiqueta">Consulta {definicion.n} · {definicion.operacion === 'find' ? 'Consulta documental' : 'Aggregation pipeline'}</p>
               <h3>{definicion.titulo}</h3>
               <p>{definicion.descripcion}</p>
             </div>
@@ -300,7 +320,7 @@ export default function Consultas() {
             <div className="aviso-info">
               <div>
                 <strong>Colección auxiliar resumen_carrera</strong>
-                <p>El endpoint ejecuta la agregación con <code>$merge</code> y devuelve el resumen actualizado. Puedes regenerarlo cuando cargues nuevos datos.</p>
+                <p>El endpoint regenera la colección con un aggregation pipeline que termina en <code>$merge</code> y luego lee el resumen con otro aggregation pipeline. Puedes regenerarlo cuando cargues nuevos datos.</p>
               </div>
               <button type="button" className="boton boton-primario" onClick={generarResumen} disabled={generando}>
                 {generando ? 'Generando…' : 'Regenerar resumen'}
@@ -321,7 +341,7 @@ export default function Consultas() {
           {requiereCorrelativo && !correlativo.trim() ? (
             <p className="vacio-mini">Ingresa un correlativo para ejecutar la consulta.</p>
           ) : cargando ? (
-            <Cargando mensaje={`Ejecutando la consulta ${numero}…`} />
+            <Cargando mensaje={`Ejecutando ${definicion?.operacion === 'find' ? 'consulta documental' : 'aggregation pipeline'} ${numero}…`} />
           ) : error ? (
             <EstadoError mensaje={error} onReintentar={recargar} titulo="La consulta no pudo ejecutarse" />
           ) : datos.length === 0 ? (

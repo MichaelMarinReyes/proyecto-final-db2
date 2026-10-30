@@ -9,6 +9,21 @@ const EJEMPLOS = {
   NEO4J: 'MATCH (a:Aspirante)-[:ASPIRA_A]->(c:Carrera)\nRETURN c.nombre AS carrera, count(DISTINCT a) AS aspirantes\nORDER BY aspirantes DESC\nLIMIT 20'
 };
 
+const TEXTOS = {
+  MONGODB: {
+    etiqueta: 'Consultas personalizadas · MongoDB',
+    titulo: 'Agregar comandos JSON de MongoDB',
+    campo: 'Comando JSON de MongoDB',
+    ayuda: 'JSON válido para una consulta documental (find) o un aggregation pipeline (aggregate). Operaciones admitidas: find, aggregate, insertMany, updateMany y deleteMany. Colecciones: evaluaciones, aspirantes y resumen_carrera. No se admite JavaScript de mongosh.'
+  },
+  NEO4J: {
+    etiqueta: 'Consultas personalizadas · Neo4j',
+    titulo: 'Agregar sentencias Cypher',
+    campo: 'Sentencia Cypher',
+    ayuda: 'Una sola sentencia Cypher de datos. Admite lecturas y CREATE/MERGE/SET/DELETE; no procedimientos, LOAD CSV ni administración del servidor.'
+  }
+};
+
 export default function ConsultasGuardadas({ motor }) {
   const [clave, setClave] = useState('');
   const [acceso, setAcceso] = useState(false);
@@ -89,12 +104,14 @@ export default function ConsultasGuardadas({ motor }) {
     setResultado(null); setError(''); setMensaje(''); setConfirmacion('');
   };
 
+  const textos = TEXTOS[motor] || TEXTOS.MONGODB;
+
   return (
     <section className="tarjeta consultas-guardadas" aria-label={`Consultas guardadas ${motor}`}>
       <div className="tarjeta-encabezado">
         <div>
-          <p className="etiqueta">Consultas personalizadas · {motor}</p>
-          <h3>Agregar y guardar nuevas consultas</h3>
+          <p className="etiqueta">{textos.etiqueta}</p>
+          <h3>{textos.titulo}</h3>
           <p>Las consultas se conservan en el servidor y se añaden a tu biblioteca, sin reemplazar las predefinidas.</p>
         </div>
         {acceso && <button type="button" className="boton boton-secundario" onClick={bloquear} disabled={ocupado}>Bloquear biblioteca</button>}
@@ -117,12 +134,10 @@ export default function ConsultasGuardadas({ motor }) {
             <label className="campo"><span>Descripción (opcional)</span>
               <input value={descripcion} onChange={(event) => setDescripcion(event.target.value)} maxLength={500} disabled={ocupado} />
             </label>
-            <label className="campo"><span>{motor === 'MONGODB' ? 'Código JSON de MongoDB' : 'Código Cypher'}</span>
+            <label className="campo"><span>{textos.campo}</span>
               <textarea className="editor-consulta" value={codigo} onChange={(event) => setCodigo(event.target.value)} required maxLength={20000} rows={12} spellCheck={false} disabled={ocupado} />
             </label>
-            <p className="ayuda">{motor === 'MONGODB'
-              ? 'JSON válido. Operaciones: find, aggregate, insertMany, updateMany y deleteMany. Colecciones: evaluaciones, aspirantes y resumen_carrera. No se admite JavaScript de mongosh.'
-              : 'Una sola sentencia Cypher de datos. Admite lecturas y CREATE/MERGE/SET/DELETE; no procedimientos, LOAD CSV ni administración del servidor.'}</p>
+            <p className="ayuda">{textos.ayuda}</p>
             <button type="submit" className="boton boton-primario" disabled={ocupado || !nombre.trim() || !codigo.trim()}>{ocupado ? 'Procesando…' : 'Guardar nueva consulta'}</button>
             <button type="button" className="boton boton-secundario" onClick={cancelar} disabled={ocupado}>Cancelar</button>
           </form> : (

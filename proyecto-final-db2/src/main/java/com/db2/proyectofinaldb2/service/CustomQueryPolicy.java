@@ -38,7 +38,7 @@ public class CustomQueryPolicy {
         }
         String tokens = cypherTokens(code).toUpperCase(Locale.ROOT);
         if (tokens.contains(";") || FORBIDDEN_CYPHER.matcher(tokens).find()) {
-            throw invalid("Cypher admite una sola consulta de datos, sin procedimientos ni administración del servidor");
+            throw invalid("Las sentencias Cypher admiten una sola consulta de datos, sin procedimientos ni administración del servidor");
         }
         return CYPHER_WRITE.matcher(tokens).find();
     }
@@ -48,11 +48,11 @@ public class CustomQueryPolicy {
         try {
             command = Document.parse(code);
         } catch (RuntimeException exception) {
-            throw invalid("El código MongoDB debe ser un objeto JSON válido, no JavaScript de mongosh");
+            throw invalid("El comando JSON de MongoDB debe ser un objeto válido, no JavaScript de mongosh");
         }
         if (command == null || !(command.get("operacion") instanceof String)
                 || !OPERATIONS.contains(command.get("operacion"))) {
-            throw invalid("Operación válida: find, aggregate, insertMany, updateMany o deleteMany");
+            throw invalid("Operación válida en comando JSON de MongoDB: find, aggregate, insertMany, updateMany o deleteMany");
         }
         collection(command.get("coleccion"));
         validateTree(command);
@@ -64,7 +64,7 @@ public class CustomQueryPolicy {
         if (operation.equals("aggregate")) {
             if (!(command.get("pipeline") instanceof List<?> pipeline) || pipeline.isEmpty()
                     || pipeline.stream().anyMatch(stage -> !(stage instanceof Document doc) || doc.size() != 1)) {
-                throw invalid("pipeline debe ser un arreglo no vacío de etapas JSON");
+                throw invalid("El aggregation pipeline debe ser un arreglo no vacío de etapas JSON");
             }
         }
         if (operation.equals("insertMany") && (!(command.get("documentos") instanceof List<?> documents)

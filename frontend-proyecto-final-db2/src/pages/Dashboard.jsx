@@ -100,7 +100,7 @@ export default function Dashboard() {
         <article className="tarjeta">
           <div className="tarjeta-encabezado">
             <div>
-              <p className="etiqueta">Consulta 1</p>
+              <p className="etiqueta">Consulta 1 · Aggregation pipeline</p>
               <h3>Aspirantes por tipo de institución</h3>
             </div>
             <span className="nota-tecnica">$group + $sum</span>
@@ -111,7 +111,7 @@ export default function Dashboard() {
         <article className="tarjeta">
           <div className="tarjeta-encabezado">
             <div>
-              <p className="etiqueta">Consulta 2</p>
+              <p className="etiqueta">Consulta 2 · Aggregation pipeline</p>
               <h3>Aprobados por materia</h3>
             </div>
             <span className="nota-tecnica">$match + $group</span>
@@ -122,7 +122,7 @@ export default function Dashboard() {
         <article className="tarjeta">
           <div className="tarjeta-encabezado">
             <div>
-              <p className="etiqueta">Consulta 4</p>
+              <p className="etiqueta">Consulta 4 · Aggregation pipeline</p>
               <h3>Porcentaje de aprobación por materia</h3>
             </div>
             <span className="nota-tecnica">$cond + $divide</span>
@@ -133,7 +133,7 @@ export default function Dashboard() {
         <article className="tarjeta">
           <div className="tarjeta-encabezado">
             <div>
-              <p className="etiqueta">Consulta 17</p>
+              <p className="etiqueta">Consulta 17 · Aggregation pipeline</p>
               <h3>Top municipios por aspirantes</h3>
             </div>
             <span className="nota-tecnica">$addToSet + $size</span>
@@ -144,7 +144,7 @@ export default function Dashboard() {
         <article className="tarjeta">
           <div className="tarjeta-encabezado">
             <div>
-              <p className="etiqueta">Consulta 18</p>
+              <p className="etiqueta">Consulta 18 · Aggregation pipeline</p>
               <h3>Aprobación por tipo de institución</h3>
             </div>
             <span className="nota-tecnica">$group + $round</span>
@@ -155,7 +155,7 @@ export default function Dashboard() {
         <article className="tarjeta">
           <div className="tarjeta-encabezado">
             <div>
-              <p className="etiqueta">Consulta 20</p>
+              <p className="etiqueta">Consulta 20 · Aggregation pipeline</p>
               <h3>Evolución de la aprobación por año</h3>
             </div>
             <span className="nota-tecnica">$group + $divide</span>
@@ -176,7 +176,7 @@ export default function Dashboard() {
         <p>
           Las gráficas resumen el comportamiento de los aspirantes: el tipo de institución de procedencia,
           el rendimiento por materia, la distribución geográfica y la evolución anual. Cada tarjeta indica la
-          consulta de MongoDB que la alimenta; el detalle completo de los 20 pipelines está en la sección
+          consulta de MongoDB que la alimenta; el detalle completo de las 20 consultas (18 aggregation pipelines y 2 consultas documentales) está en la sección
           <Link to="/consultas"> Consultas MongoDB</Link>.
         </p>
       </section>

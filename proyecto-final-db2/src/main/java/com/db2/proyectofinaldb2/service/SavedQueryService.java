@@ -97,7 +97,7 @@ public class SavedQueryService {
         if (engine.equals("NEO4J")) {
             write = compileNeo4j(code) || write;
             if (write && !confirmed) {
-                throw new ApiException(HttpStatus.CONFLICT, "Neo4j identifica una escritura; es necesaria la confirmación explícita");
+                throw new ApiException(HttpStatus.CONFLICT, "La sentencia Cypher contiene operaciones de escritura; es necesaria la confirmación explícita");
             }
         }
         long start = System.currentTimeMillis();
@@ -109,15 +109,15 @@ public class SavedQueryService {
             log.info("Consulta personalizada ejecutada: id={}, motor={}, modo={}", id, engine, result.get("modo"));
             return result;
         } catch (ClientException exception) {
-            log.warn("Cypher personalizado inválido: id={}, tipo={}", id, exception.code());
-            throw new ApiException(HttpStatus.BAD_REQUEST, "Neo4j rechazó la consulta. Revise la sintaxis y los tipos de datos");
+            log.warn("Sentencia Cypher personalizada inválida: id={}, tipo={}", id, exception.code());
+            throw new ApiException(HttpStatus.BAD_REQUEST, "Neo4j rechazó la sentencia Cypher. Revise la sintaxis y los tipos de datos");
         } catch (MongoException exception) {
             if (exception.getCode() == 50) {
                 throw new ApiException(HttpStatus.REQUEST_TIMEOUT, "La consulta superó el tiempo máximo permitido");
             }
             if (exception instanceof MongoCommandException || exception instanceof MongoWriteException
                     || exception instanceof MongoBulkWriteException) {
-                throw new ApiException(HttpStatus.BAD_REQUEST, "MongoDB rechazó la consulta. Revise operadores, tipos y claves duplicadas");
+                throw new ApiException(HttpStatus.BAD_REQUEST, "MongoDB rechazó el comando JSON. Revise operadores, tipos y claves duplicadas");
             }
             throw exception;
         }
@@ -187,7 +187,7 @@ public class SavedQueryService {
             }
             return !type.name().equals("READ_ONLY");
         } catch (ClientException exception) {
-            throw new ApiException(HttpStatus.BAD_REQUEST, "Neo4j rechazó la consulta. Revise la sintaxis y los tipos de datos");
+            throw new ApiException(HttpStatus.BAD_REQUEST, "Neo4j rechazó la sentencia Cypher. Revise la sintaxis y los tipos de datos");
         }
     }
 

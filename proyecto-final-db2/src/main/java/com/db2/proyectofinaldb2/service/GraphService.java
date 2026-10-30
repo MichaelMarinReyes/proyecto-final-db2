@@ -56,7 +56,7 @@ public class GraphService {
             case 6 -> CypherCatalog.G6_FULL_PATH;
             case 7 -> CypherCatalog.G7_SHORTEST_PATH;
             default -> throw new ApiException(HttpStatus.NOT_FOUND,
-                    "La consulta de grafo " + number + " no existe. Las consultas válidas van de 1 a 7");
+                    "La consulta Cypher " + number + " no existe. Las consultas válidas van de 1 a 7");
         };
 
         Map<String, Object> params = new HashMap<>();

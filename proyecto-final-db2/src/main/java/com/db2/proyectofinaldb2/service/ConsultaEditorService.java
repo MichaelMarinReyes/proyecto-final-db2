@@ -59,7 +59,7 @@ public class ConsultaEditorService {
         Document command = policy.mongo(code);
         if (policy.writes("MONGODB", code)) {
             throw new ApiException(HttpStatus.BAD_REQUEST,
-                    "El editor de consultas solo permite lectura: find y aggregate sin $out ni $merge");
+                    "El editor solo permite lectura: comandos JSON de MongoDB con find o aggregation pipeline sin $out ni $merge");
         }
         String operation = command.getString("operacion");
         var collection = mongo.getCollection(command.getString("coleccion"))
@@ -101,7 +101,7 @@ public class ConsultaEditorService {
         validateCode(code);
         if (policy.writes("NEO4J", code)) {
             throw new ApiException(HttpStatus.BAD_REQUEST,
-                    "El editor de consultas solo permite lectura: no se admiten escrituras en Cypher");
+                    "El editor solo permite lectura: no se admiten escrituras en sentencias Cypher");
         }
         Map<String, Object> params = parameters == null ? new LinkedHashMap<>() : new LinkedHashMap<>(parameters);
         validateParameters(params);

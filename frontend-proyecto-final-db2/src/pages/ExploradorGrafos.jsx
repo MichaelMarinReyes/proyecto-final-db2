@@ -301,12 +301,12 @@ export default function ExploradorGrafos() {
           <section className="tarjeta">
             <div className="tarjeta-encabezado">
               <div>
-                <p className="etiqueta">Consulta G{definicionConsulta.n}</p>
+                <p className="etiqueta">Consulta G{definicionConsulta.n} · Sentencia Cypher</p>
                 <h3>{definicionConsulta.titulo}</h3>
                 <p>{definicionConsulta.descripcion}</p>
               </div>
               <button type="button" className="boton boton-primario" onClick={() => ejecutarConsulta()} disabled={cargandoConsulta}>
-                {cargandoConsulta ? 'Ejecutando…' : 'Ejecutar consulta'}
+                {cargandoConsulta ? 'Ejecutando…' : 'Ejecutar sentencia Cypher'}
               </button>
             </div>
 
