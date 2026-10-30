@@ -7,6 +7,7 @@ import EstadoError from '../components/EstadoError';
 import FiltroBar, { SelectCampo } from '../components/FiltroBar';
 import useCatalogos from '../hooks/useCatalogos';
 import ConsultasGuardadas from '../components/ConsultasGuardadas';
+import ConsultaEjecutada from '../components/ConsultaEjecutada';
 import { colorPorTipo, etiquetaNodo, formatearNumero, formatearValor } from '../utils/formato';
 
 const CONSULTAS_GRAFO = [
@@ -76,6 +77,7 @@ export default function ExploradorGrafos() {
   const [pestana, setPestana] = useState('visualizacion');
   const [consulta, setConsulta] = useState(1);
   const [resultadoConsulta, setResultadoConsulta] = useState([]);
+  const [consultaGrafo, setConsultaGrafo] = useState(null);
   const [cargandoConsulta, setCargandoConsulta] = useState(false);
   const [errorConsulta, setErrorConsulta] = useState(null);
 
@@ -141,10 +143,13 @@ export default function ExploradorGrafos() {
     });
     try {
       const { data } = await api.get(`/grafo/consultas/${numero}`, { params });
-      setResultadoConsulta(data);
+      const filas = Array.isArray(data) ? data : data.filas || [];
+      setResultadoConsulta(filas);
+      setConsultaGrafo(Array.isArray(data) ? null : data.consulta || null);
     } catch (error) {
       setErrorConsulta(error.message);
       setResultadoConsulta([]);
+      setConsultaGrafo(null);
     } finally {
       setCargandoConsulta(false);
     }
@@ -280,6 +285,7 @@ export default function ExploradorGrafos() {
                 onClick={() => {
                   setConsulta(item.n);
                   setResultadoConsulta([]);
+                  setConsultaGrafo(null);
                   setErrorConsulta(null);
                 }}
               >
@@ -316,6 +322,10 @@ export default function ExploradorGrafos() {
               <p className="vacio-mini">Ejecuta la consulta para ver sus resultados.</p>
             ) : (
               <TablaResultados titulo={`cypher-g${consulta}`} filas={resultadoConsulta} columnas={definicionConsulta.columnas} />
+            )}
+
+            {!cargandoConsulta && !errorConsulta && consultaGrafo && (
+              <ConsultaEjecutada key={consulta} motor="NEO4J" consulta={consultaGrafo} />
             )}
           </section>
         </div>

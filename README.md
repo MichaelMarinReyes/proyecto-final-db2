@@ -132,9 +132,11 @@ ProyectoFinal/
 | GET | `/api/cargas` | Historial de cargas |
 | GET | `/api/cargas/{id}` | Estado y reporte de una carga |
 | GET | `/api/cargas/{id}/rechazados` | Registros rechazados paginados |
-| GET | `/api/consultas/mongo/1..20` | Consultas analíticas de MongoDB |
+| GET | `/api/consultas/mongo/1..20` | Consultas analíticas de MongoDB con la consulta ejecutada |
 | POST | `/api/consultas/mongo/6/resumen` | Regenera `resumen_carrera` |
-| GET | `/api/grafo/consultas/1..7` | Consultas Cypher tabulares |
+| POST | `/api/consultas/mongo/ejecutar` | Ejecuta una versión editada de solo lectura de una consulta MongoDB |
+| GET | `/api/grafo/consultas/1..7` | Consultas Cypher tabulares con la consulta ejecutada |
+| POST | `/api/grafo/ejecutar` | Ejecuta una versión editada de solo lectura de una consulta Cypher |
 | GET | `/api/grafo/visualizacion` | Subgrafo con filtros |
 | GET | `/api/grafo/nodo/{id}` | Detalle y vecinos de un nodo |
 | GET | `/api/buscar?tipo=...&q=...` | Búsqueda unificada |

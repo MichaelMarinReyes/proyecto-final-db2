@@ -30,13 +30,14 @@ export default function Dashboard() {
       ]);
       setSalud(saludRes.data);
       setCarreras(carrerasRes.data);
+      const filas = (respuesta) => (Array.isArray(respuesta.data) ? respuesta.data : respuesta.data.filas || []);
       setDatos({
-        c1: c1.data,
-        c2: c2.data,
-        c4: c4.data,
-        c17: c17.data,
-        c18: c18.data,
-        c20: c20.data
+        c1: filas(c1),
+        c2: filas(c2),
+        c4: filas(c4),
+        c17: filas(c17),
+        c18: filas(c18),
+        c20: filas(c20)
       });
     } catch (consultaError) {
       setError(consultaError.message);

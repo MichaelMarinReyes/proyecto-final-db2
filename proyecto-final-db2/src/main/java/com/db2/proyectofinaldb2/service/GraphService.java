@@ -1,6 +1,8 @@
 package com.db2.proyectofinaldb2.service;
 
 import com.db2.proyectofinaldb2.dto.GrafoDto;
+import com.db2.proyectofinaldb2.dto.QueryResult;
+import com.db2.proyectofinaldb2.dto.QueryView;
 import com.db2.proyectofinaldb2.exception.ApiException;
 import com.db2.proyectofinaldb2.neo4j.CypherCatalog;
 import java.time.temporal.TemporalAccessor;
@@ -35,6 +37,16 @@ public class GraphService {
                                               String tipo,
                                               Integer anio,
                                               Integer limit) {
+        return runQueryWithPlan(number, carrera, depto, materia, tipo, anio, limit).filas();
+    }
+
+    public QueryResult runQueryWithPlan(int number,
+                                        String carrera,
+                                        String depto,
+                                        String materia,
+                                        String tipo,
+                                        Integer anio,
+                                        Integer limit) {
         String query = switch (number) {
             case 1 -> CypherCatalog.G1_SUBGRAPH_BY_CAREER;
             case 2 -> CypherCatalog.G2_CAREERS_BY_DEPARTMENT;
@@ -61,12 +73,13 @@ public class GraphService {
         }
 
         try (Session session = driver.session()) {
-            return session.executeRead(transaction -> transaction.run(query, params)
+            List<Map<String, Object>> rows = session.executeRead(transaction -> transaction.run(query, params)
                     .list(record -> {
                         Map<String, Object> row = new LinkedHashMap<>();
                         record.asMap().forEach((key, value) -> row.put(key, normalize(value)));
                         return row;
                     }));
+            return new QueryResult(rows, new QueryView("NEO4J", query, null, new LinkedHashMap<>(params)));
         }
     }
 

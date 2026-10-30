@@ -7,6 +7,7 @@ import FiltroBar, { SelectCampo } from '../components/FiltroBar';
 import useConsultas from '../hooks/useConsultas';
 import useCatalogos from '../hooks/useCatalogos';
 import ConsultasGuardadas from '../components/ConsultasGuardadas';
+import ConsultaEjecutada from '../components/ConsultaEjecutada';
 import FichaAspirante from '../components/FichaAspirante';
 import { formatearNumero } from '../utils/formato';
 
@@ -196,7 +197,7 @@ export default function Consultas() {
   }, [filtros, numero, requiereCorrelativo, correlativo]);
 
   const numeroActivo = requiereCorrelativo && !correlativo.trim() ? null : numero;
-  const { datos, cargando, error, recargar, generarResumen, generando } = useConsultas(numeroActivo, filtrosConsulta);
+  const { datos, consulta, cargando, error, recargar, generarResumen, generando } = useConsultas(numeroActivo, filtrosConsulta);
 
   const cambiarFiltro = (campo, valor) => {
     setFiltros((actual) => ({ ...actual, [campo]: valor }));
@@ -348,6 +349,14 @@ export default function Consultas() {
 
           {vistaEfectiva === 'grafico' && tieneGrafico && datos.length > 20 && (
             <p className="ayuda">La gráfica muestra los primeros 20 registros; cambia a la vista de tabla para ver todos.</p>
+          )}
+
+          {!cargando && !error && consulta && (
+            <ConsultaEjecutada
+              key={`${numeroActivo}-${JSON.stringify(filtrosConsulta)}`}
+              motor="MONGODB"
+              consulta={consulta}
+            />
           )}
         </section>
       </div>

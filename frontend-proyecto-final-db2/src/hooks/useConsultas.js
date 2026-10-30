@@ -3,6 +3,7 @@ import api from '../api/client';
 
 export default function useConsultas(numero, filtros) {
   const [datos, setDatos] = useState([]);
+  const [consulta, setConsulta] = useState(null);
   const [cargando, setCargando] = useState(false);
   const [error, setError] = useState(null);
   const [generando, setGenerando] = useState(false);
@@ -20,17 +21,21 @@ export default function useConsultas(numero, filtros) {
   const cargar = useCallback(async () => {
     if (!numero) {
       setDatos([]);
+      setConsulta(null);
       return [];
     }
     setCargando(true);
     setError(null);
     try {
       const { data } = await api.get(`/consultas/mongo/${numero}`, { params: parametros });
-      setDatos(data);
-      return data;
+      const filas = Array.isArray(data) ? data : data.filas || [];
+      setDatos(filas);
+      setConsulta(Array.isArray(data) ? null : data.consulta || null);
+      return filas;
     } catch (consultaError) {
       setError(consultaError.message);
       setDatos([]);
+      setConsulta(null);
       return [];
     } finally {
       setCargando(false);
@@ -46,8 +51,10 @@ export default function useConsultas(numero, filtros) {
     setError(null);
     try {
       const { data } = await api.post('/consultas/mongo/6/resumen');
-      setDatos(data);
-      return data;
+      const filas = Array.isArray(data) ? data : data.filas || [];
+      setDatos(filas);
+      setConsulta(Array.isArray(data) ? null : data.consulta || null);
+      return filas;
     } catch (resumenError) {
       setError(resumenError.message);
       return [];
@@ -56,5 +63,5 @@ export default function useConsultas(numero, filtros) {
     }
   }, []);
 
-  return { datos, cargando, error, recargar: cargar, generarResumen, generando };
+  return { datos, consulta, cargando, error, recargar: cargar, generarResumen, generando };
 }

@@ -1,5 +1,7 @@
 package com.db2.proyectofinaldb2.service;
 
+import com.db2.proyectofinaldb2.dto.QueryResult;
+import com.db2.proyectofinaldb2.dto.QueryView;
 import com.db2.proyectofinaldb2.exception.ApiException;
 import com.db2.proyectofinaldb2.repository.EvaluationRepository;
 import com.db2.proyectofinaldb2.util.MongoJson;
@@ -7,11 +9,14 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import org.bson.Document;
+import org.bson.json.JsonWriterSettings;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 
 @Service
 public class MongoQueryService {
+
+    private static final JsonWriterSettings PRETTY_JSON = JsonWriterSettings.builder().indent(true).build();
 
     private final EvaluationRepository repository;
 
@@ -20,7 +25,16 @@ public class MongoQueryService {
     }
 
     public List<Map<String, Object>> execute(int number, QueryFilters filters) {
-        return switch (number) {
+        return executeWithPlan(number, filters).filas();
+    }
+
+    /**
+     * Executes a catalogue query and returns both the rows and the statement
+     * that produced them. The frontend shows that statement below the result
+     * and can reuse it as the starting point for a read-only edited query.
+     */
+    public QueryResult executeWithPlan(int number, QueryFilters filters) {
+        MongoQueryPlan plan = switch (number) {
             case 1 -> aspirantsByInstitutionType(filters);
             case 2 -> approvedBySubject(filters);
             case 3 -> approvedByCareerAndYear(filters);
@@ -44,10 +58,15 @@ public class MongoQueryService {
             default -> throw new ApiException(HttpStatus.NOT_FOUND,
                     "La consulta " + number + " no existe. Las consultas válidas van de 1 a 20");
         };
+        List<Map<String, Object>> rows = plan.datos() != null ? plan.datos()
+                : MongoJson.toList(repository.aggregate(
+                        plan.codigo().getString("coleccion"),
+                        plan.codigo().getList("pipeline", Document.class)));
+        return new QueryResult(rows, new QueryView("MONGODB", plan.codigo().toJson(PRETTY_JSON), plan.nota()));
     }
 
     // 1. Aspirantes por tipo de institución educativa
-    private List<Map<String, Object>> aspirantsByInstitutionType(QueryFilters filters) {
+    private MongoQueryPlan aspirantsByInstitutionType(QueryFilters filters) {
         List<Document> pipeline = new ArrayList<>();
         addMatch(pipeline, filters);
         pipeline.add(parse("""
@@ -64,7 +83,7 @@ public class MongoQueryService {
     }
 
     // 2. Cantidad de aprobados por materia
-    private List<Map<String, Object>> approvedBySubject(QueryFilters filters) {
+    private MongoQueryPlan approvedBySubject(QueryFilters filters) {
         List<Document> pipeline = new ArrayList<>();
         Document match = baseMatch(filters);
         match.put("aprobado", true);
@@ -80,7 +99,7 @@ public class MongoQueryService {
     }
 
     // 3. Aprobados por carrera y año de ingreso
-    private List<Map<String, Object>> approvedByCareerAndYear(QueryFilters filters) {
+    private MongoQueryPlan approvedByCareerAndYear(QueryFilters filters) {
         List<Document> pipeline = new ArrayList<>();
         Document match = baseMatch(filters);
         match.put("aprobado", true);
@@ -104,7 +123,7 @@ public class MongoQueryService {
     }
 
     // 4. Porcentaje de aprobación por materia
-    private List<Map<String, Object>> approvalRateBySubject(QueryFilters filters) {
+    private MongoQueryPlan approvalRateBySubject(QueryFilters filters) {
         List<Document> pipeline = new ArrayList<>();
         addMatch(pipeline, filters);
         pipeline.add(parse("""
@@ -128,7 +147,7 @@ public class MongoQueryService {
     }
 
     // 5. Promedio de edad por carrera
-    private List<Map<String, Object>> averageAgeByCareer(QueryFilters filters) {
+    private MongoQueryPlan averageAgeByCareer(QueryFilters filters) {
         List<Document> pipeline = new ArrayList<>();
         Document match = baseMatch(filters);
         match.put("edad_ingreso", new Document("$ne", null));
@@ -159,7 +178,7 @@ public class MongoQueryService {
     }
 
     // 6. Colección auxiliar resumen_carrera
-    private List<Map<String, Object>> careerSummary() {
+    private MongoQueryPlan careerSummary() {
         List<Document> pipeline = List.of(
                 parse("""
                         { $group: {
@@ -218,11 +237,14 @@ public class MongoQueryService {
                         } }
                         """)
         );
-        return MongoJson.toList(repository.aggregate(EvaluationRepository.CAREER_SUMMARY, read));
+        return new MongoQueryPlan(
+                aggregateCommand(EvaluationRepository.CAREER_SUMMARY, read),
+                MongoJson.toList(repository.aggregate(EvaluationRepository.CAREER_SUMMARY, read)),
+                "La tabla se lee de la colección resumen_carrera. La regeneración ejecuta $merge sobre evaluaciones y no está disponible desde el editor.");
     }
 
     // 7. Promedio de edad de aprobados por carrera y tipo de institución
-    private List<Map<String, Object>> averageAgeApprovedByCareerAndType(QueryFilters filters) {
+    private MongoQueryPlan averageAgeApprovedByCareerAndType(QueryFilters filters) {
         List<Document> pipeline = new ArrayList<>();
         Document match = baseMatch(filters);
         match.put("aprobado", true);
@@ -255,7 +277,7 @@ public class MongoQueryService {
     }
 
     // 8. Distribución de aprobados por municipio y carrera objetivo
-    private List<Map<String, Object>> approvedByMunicipalityAndCareer(QueryFilters filters) {
+    private MongoQueryPlan approvedByMunicipalityAndCareer(QueryFilters filters) {
         List<Document> pipeline = new ArrayList<>();
         Document match = baseMatch(filters);
         match.put("aprobado", true);
@@ -288,7 +310,7 @@ public class MongoQueryService {
     }
 
     // 9. Evaluaciones por mes y materia para instituciones públicas
-    private List<Map<String, Object>> evaluationsByMonthAndSubject(QueryFilters filters) {
+    private MongoQueryPlan evaluationsByMonthAndSubject(QueryFilters filters) {
         List<Document> pipeline = new ArrayList<>();
         Document match = baseMatch(filters);
         match.put("tipo_ie", "PUBLICO");
@@ -308,7 +330,7 @@ public class MongoQueryService {
     }
 
     // 10. Top 5 carreras más demandadas por aspirantes entre 16 y 18 años
-    private List<Map<String, Object>> topCareersByAge(QueryFilters filters) {
+    private MongoQueryPlan topCareersByAge(QueryFilters filters) {
         List<Document> pipeline = new ArrayList<>();
         Document match = baseMatch(filters);
         match.put("edad_ingreso", new Document("$gte", 16).append("$lte", 18));
@@ -328,13 +350,20 @@ public class MongoQueryService {
     }
 
     // 11. Historial de desempeño por aspirante
-    private List<Map<String, Object>> performanceHistory(QueryFilters filters) {
+    private MongoQueryPlan performanceHistory(QueryFilters filters) {
         requireCorrelativo(filters);
-        return MongoJson.toList(repository.findEvaluationsByAspirante(filters.correlativo()));
+        Document filtro = new Document("correlativo_aspirante", filters.correlativo());
+        Document orden = new Document("anio_ingreso", 1)
+                .append("oportunidad", 1)
+                .append("fecha_asignacion", 1);
+        return new MongoQueryPlan(
+                findCommand(EvaluationRepository.EVALUATIONS, filtro, orden),
+                MongoJson.toList(repository.findEvaluationsByAspirante(filters.correlativo())),
+                null);
     }
 
     // 12. Distribución por sexo y tipo de institución educativa
-    private List<Map<String, Object>> distributionBySexAndType(QueryFilters filters) {
+    private MongoQueryPlan distributionBySexAndType(QueryFilters filters) {
         List<Document> pipeline = new ArrayList<>();
         addMatch(pipeline, filters);
         pipeline.add(parse("""
@@ -356,7 +385,7 @@ public class MongoQueryService {
     }
 
     // 13. Tasa de aprobación por edad
-    private List<Map<String, Object>> approvalRateByAge(QueryFilters filters) {
+    private MongoQueryPlan approvalRateByAge(QueryFilters filters) {
         List<Document> pipeline = new ArrayList<>();
         Document match = baseMatch(filters);
         match.put("edad_ingreso", new Document("$ne", null));
@@ -382,7 +411,7 @@ public class MongoQueryService {
     }
 
     // 14. Número promedio de intentos por materia
-    private List<Map<String, Object>> averageAttemptsBySubject(QueryFilters filters) {
+    private MongoQueryPlan averageAttemptsBySubject(QueryFilters filters) {
         List<Document> pipeline = new ArrayList<>();
         addMatch(pipeline, filters);
         pipeline.add(parse("""
@@ -417,18 +446,21 @@ public class MongoQueryService {
     }
 
     // 15. Historial completo de un aspirante (documento embebido)
-    private List<Map<String, Object>> fullAspirantHistory(QueryFilters filters) {
+    private MongoQueryPlan fullAspirantHistory(QueryFilters filters) {
         requireCorrelativo(filters);
         Document aspirant = repository.findAspirante(filters.correlativo());
         if (aspirant == null) {
             throw new ApiException(HttpStatus.NOT_FOUND,
                     "No se encontró el aspirante con correlativo " + filters.correlativo());
         }
-        return List.of(MongoJson.toMap(aspirant));
+        return new MongoQueryPlan(
+                findCommand(EvaluationRepository.ASPIRANTS, new Document("_id", filters.correlativo()), null),
+                List.of(MongoJson.toMap(aspirant)),
+                null);
     }
 
     // 16. Carreras con más aspirantes reprobados en primer intento
-    private List<Map<String, Object>> careersWithMostFirstAttemptFailures(QueryFilters filters) {
+    private MongoQueryPlan careersWithMostFirstAttemptFailures(QueryFilters filters) {
         List<Document> pipeline = new ArrayList<>();
         Document match = baseMatch(filters);
         match.put("aprobado", false);
@@ -449,7 +481,7 @@ public class MongoQueryService {
     }
 
     // 17. Top 5 municipios con mayor cantidad de aspirantes
-    private List<Map<String, Object>> topMunicipalities(QueryFilters filters) {
+    private MongoQueryPlan topMunicipalities(QueryFilters filters) {
         List<Document> pipeline = new ArrayList<>();
         addMatch(pipeline, filters);
         pipeline.add(parse("""
@@ -472,7 +504,7 @@ public class MongoQueryService {
     }
 
     // 18. Tasa de aprobación por tipo de institución educativa
-    private List<Map<String, Object>> approvalRateByInstitutionType(QueryFilters filters) {
+    private MongoQueryPlan approvalRateByInstitutionType(QueryFilters filters) {
         List<Document> pipeline = new ArrayList<>();
         addMatch(pipeline, filters);
         pipeline.add(parse("""
@@ -496,7 +528,7 @@ public class MongoQueryService {
     }
 
     // 19. Carreras más demandadas por departamento
-    private List<Map<String, Object>> topCareersByDepartment(QueryFilters filters) {
+    private MongoQueryPlan topCareersByDepartment(QueryFilters filters) {
         List<Document> pipeline = new ArrayList<>();
         addMatch(pipeline, filters);
         pipeline.add(parse("""
@@ -536,7 +568,7 @@ public class MongoQueryService {
     }
 
     // 20. Evolución de aprobación por año de ingreso
-    private List<Map<String, Object>> approvalEvolutionByYear(QueryFilters filters) {
+    private MongoQueryPlan approvalEvolutionByYear(QueryFilters filters) {
         List<Document> pipeline = new ArrayList<>();
         addMatch(pipeline, filters);
         pipeline.add(parse("""
@@ -562,8 +594,27 @@ public class MongoQueryService {
         return run(pipeline);
     }
 
-    private List<Map<String, Object>> run(List<Document> pipeline) {
-        return MongoJson.toList(repository.aggregate(EvaluationRepository.EVALUATIONS, pipeline));
+    private MongoQueryPlan run(List<Document> pipeline) {
+        return new MongoQueryPlan(aggregateCommand(EvaluationRepository.EVALUATIONS, pipeline), null, null);
+    }
+
+    private Document aggregateCommand(String collection, List<Document> pipeline) {
+        return new Document("operacion", "aggregate")
+                .append("coleccion", collection)
+                .append("pipeline", pipeline);
+    }
+
+    private Document findCommand(String collection, Document filter, Document sort) {
+        Document command = new Document("operacion", "find")
+                .append("coleccion", collection)
+                .append("filtro", filter);
+        if (sort != null && !sort.isEmpty()) {
+            command.append("sort", sort);
+        }
+        return command;
+    }
+
+    private record MongoQueryPlan(Document codigo, List<Map<String, Object>> datos, String nota) {
     }
 
     private void addMatch(List<Document> pipeline, QueryFilters filters) {
