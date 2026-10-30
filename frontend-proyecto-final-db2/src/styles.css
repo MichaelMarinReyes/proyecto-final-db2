@@ -483,6 +483,8 @@ tbody tr:hover { background: #f8fafc; }
 .consulta-editor-tabs { display: inline-flex; background: #f1f5f9; border-radius: 8px; padding: 2px; }
 .consulta-editor-tabs button { border: none; background: transparent; padding: 5px 12px; border-radius: 6px; font-size: 11px; font-weight: 600; color: var(--texto-suave); cursor: pointer; }
 .consulta-editor-tabs button.activo { background: #fff; color: var(--primario); box-shadow: 0 1px 3px rgba(15, 23, 42, 0.12); }
+.boton-tab { border: none; background: transparent; padding: 5px 12px; border-radius: 6px; font-size: 11px; font-weight: 600; color: var(--texto-suave); cursor: pointer; }
+.boton-tab.activo { background: #fff; color: var(--primario); box-shadow: 0 1px 3px rgba(15, 23, 42, 0.12); }
 .consulta-editor-pre { width: 100%; box-sizing: border-box; min-height: 160px; padding: 14px 16px; border: 1px solid #1e293b; border-radius: 10px; background: #0f172a; color: #e2e8f0; font: 12px/1.6 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; white-space: pre-wrap; word-break: break-word; overflow: auto; }
 .consulta-editor-vacio { padding: 14px 16px; border: 1px dashed #334155; border-radius: 10px; background: #0f172a; color: #94a3b8; font-size: 12px; }
 .consulta-parametros summary { cursor: pointer; font-size: 11px; color: var(--texto-suave); }
